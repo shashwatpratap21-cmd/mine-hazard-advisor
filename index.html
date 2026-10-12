@@ -401,7 +401,8 @@ async function askClaude(){
 }
 
 $("f").addEventListener("submit",e=>{e.preventDefault();run();});
-$("q").value=EXAMPLES[0][0]; $("place").value=EXAMPLES[0][1]; run();
+$("q").value=""; $("place").value=""; $("mt").value="";
+$("out").innerHTML=`<div class="empty">Type the job you are going to do, or tap an example, then press <b>Find precedents</b>. The likely hazard, the most important preventive measures and similar past accidents will appear here.</div>`;
 (async()=>{ try{ sample=await window.claude?.use?.("sample"); }catch{ sample=null; } if(last) wireAdvice(); })();
 </script>
 

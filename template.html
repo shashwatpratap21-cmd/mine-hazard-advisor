@@ -1,0 +1,405 @@
+<title>Mine Hazard Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field-instrument console. Query panel on the left, findings stacked on the right, model card at the foot. */
+:root{
+  --bg:#eef0f2; --panel:#ffffff; --ink:#1b2129; --muted:#5b6672; --line:#d5dade;
+  --hiviz:#e8a317; --hiviz-ink:#2a1d00; --hiviz-soft:#fbefd2;
+  --steel:#2f4858; --steel-soft:#e3eaef;
+  --fatal:#b2382c; --fatal-soft:#f6e1de;
+  --bar:#c7cfd6;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13181d; --panel:#1b2229; --ink:#e4e8ec; --muted:#97a3ae; --line:#2e3943;
+  --hiviz:#f0b43a; --hiviz-ink:#1d1400; --hiviz-soft:#3a2f17;
+  --steel:#9fc0d4; --steel-soft:#22313b; --fatal:#e5786b; --fatal-soft:#3b2220; --bar:#3a4651; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13181d; --panel:#1b2229; --ink:#e4e8ec; --muted:#97a3ae; --line:#2e3943;
+  --hiviz:#f0b43a; --hiviz-ink:#1d1400; --hiviz-soft:#3a2f17;
+  --steel:#9fc0d4; --steel-soft:#22313b; --fatal:#e5786b; --fatal-soft:#3b2220; --bar:#3a4651; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+@media (max-width:620px){.stamp{text-align:left}}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 32px;padding-block:28px 20px;position:relative}
+h1{font:700 clamp(2.1rem,5vw,3.3rem)/0.95 var(--display);letter-spacing:.01em;text-transform:uppercase;margin:0;text-wrap:balance}
+.sub{color:var(--muted);max-width:56ch;margin:6px 0 0}
+.stamp{font:500 .78rem/1.4 var(--mono);color:var(--muted);text-align:right}
+.stamp b{color:var(--ink);font-weight:500}
+main{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:28px;margin-top:36px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:minmax(0,1fr)}}
+.label{font:600 .78rem/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+form{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:16px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
+@media (max-width:860px){form{position:static}}
+.field{display:grid;gap:6px}
+textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:10px 12px;width:100%}
+textarea{min-height:150px;resize:vertical;line-height:1.45}
+textarea:focus,select:focus,button:focus-visible,.chip:focus-visible{outline:2px solid var(--hiviz);outline-offset:1px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .8rem/1.2 var(--body);background:var(--steel-soft);color:var(--steel);border:0;border-radius:3px;padding:6px 9px;cursor:pointer;text-align:left}
+.chip:hover{filter:brightness(.96)}
+.go{font:700 1.05rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;background:var(--hiviz);color:var(--hiviz-ink);border:0;border-radius:4px;padding:14px;cursor:pointer}
+.go:hover{filter:brightness(1.05)}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+section.out{display:grid;gap:28px;min-width:0}
+.hazard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:start}
+@media (max-width:620px){.hazard{grid-template-columns:minmax(0,1fr)}}
+.hz-name{font:700 clamp(1.7rem,4vw,2.4rem)/1 var(--display);text-transform:uppercase;margin:8px 0 6px;text-wrap:balance}
+.conf{display:inline-flex;gap:8px;align-items:center;font:500 .8rem var(--mono);padding:3px 8px;border-radius:3px}
+.conf.hi{background:var(--hiviz);color:var(--hiviz-ink)} .conf.mid{background:var(--hiviz-soft);color:var(--ink)} .conf.lo{background:var(--steel-soft);color:var(--steel)}
+.bars{display:grid;gap:7px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 52px;gap:10px;align-items:center;font-size:.86rem}
+.bar .track{grid-column:1/-1;height:6px;background:var(--bar);border-radius:3px;overflow:hidden;margin-top:-4px}
+.bar .fill{height:100%;background:var(--steel)}
+.bar.top .fill{background:var(--hiviz)}
+.bar .p{font:500 .8rem var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.sec-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sec-h h2{font:700 1.45rem/1 var(--display);text-transform:uppercase;letter-spacing:.02em;margin:0}
+.cases{display:grid;gap:14px}
+.case{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;display:grid;gap:10px;min-width:0}
+.case-top{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.rid{font:500 .82rem var(--mono);background:var(--ink);color:var(--panel);padding:2px 7px;border-radius:3px}
+.mine{font-weight:700}
+.meta{font-size:.85rem;color:var(--muted)}
+.killed{margin-left:auto;font:600 .78rem var(--mono);color:var(--fatal);background:var(--fatal-soft);padding:2px 7px;border-radius:3px;white-space:nowrap}
+.score{font:500 .75rem var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.sit{margin:0;color:var(--ink);max-width:75ch}
+.measures{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.measures li{border-left:3px solid var(--hiviz);padding:2px 0 2px 12px;max-width:78ch;font-size:.95rem}
+.measures li em{font-style:normal;font-weight:700;color:var(--muted);font-family:var(--display);letter-spacing:.05em;text-transform:uppercase;font-size:.8rem;margin-right:4px}
+.foot{display:flex;flex-wrap:wrap;gap:6px 16px;font:400 .78rem var(--mono);color:var(--muted)}
+.foot b{color:var(--ink);font-weight:500}
+.brief{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 16px;margin:0}
+.brief dt{font:600 .74rem/1.9 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.brief dd{margin:0;max-width:72ch;min-width:0}
+@media (max-width:520px){.brief{grid-template-columns:minmax(0,1fr);gap:2px}.brief dd{margin-bottom:8px}}
+.lessons{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.lessons li{border-left:3px solid var(--hiviz);padding-left:10px}
+.regs{display:flex;flex-wrap:wrap;gap:6px}
+.regs span{font:500 .78rem var(--mono);background:var(--steel-soft);color:var(--steel);padding:2px 7px;border-radius:3px}
+.full{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.case{gap:12px}
+.todo{display:grid;gap:12px}
+.todo-list{margin:0;padding:0;list-style:none;counter-reset:t;display:grid;gap:10px}
+.todo-list li{counter-increment:t;display:grid;grid-template-columns:2rem minmax(0,1fr);gap:2px 12px;background:var(--hiviz-soft);border-radius:6px;padding:12px 14px}
+.todo-list li::before{content:counter(t);font:700 1.6rem/1 var(--display);color:var(--ink)}
+.todo-t{font-weight:600;max-width:70ch}
+.todo-src{font:400 .76rem var(--mono);color:var(--muted)}
+details summary{cursor:pointer;font-size:.86rem;color:var(--steel);font-weight:600}
+.advice{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px;display:grid;gap:12px}
+.advice-body{white-space:pre-wrap;max-width:75ch;font-size:.97rem}
+.advice-body:empty{display:none}
+.btn2{font:600 .95rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;background:transparent;color:var(--ink);border:2px solid var(--ink);border-radius:4px;padding:10px 14px;cursor:pointer;justify-self:start}
+.btn2[disabled]{opacity:.5;cursor:default}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.empty{color:var(--muted);padding:20px;border:1px dashed var(--line);border-radius:6px}
+.model{margin-top:48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.model div{background:var(--panel);padding:14px 16px;display:grid;gap:4px}
+.model .v{font:700 1.8rem/1 var(--display);font-variant-numeric:tabular-nums}
+.model .k{font-size:.8rem;color:var(--muted)}
+.disc{margin:18px 0 0;font-size:.85rem;color:var(--muted);max-width:90ch}
+@media (prefers-reduced-motion:no-preference){.case,.hazard{animation:rise .25s ease-out both}}
+@keyframes rise{from{transform:translateY(4px)}to{transform:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <h1>Mine Hazard Advisor</h1>
+    <p class="sub">Describe a work situation. The model names the likely hazard and pulls the closest fatal accidents from DGMS records, with the preventive measures the inspectors said would have averted them.</p>
+  </div>
+</header>
+
+<main>
+  <form id="f" autocomplete="off">
+    <div class="field">
+      <label class="label" for="q">Situation</label>
+      <textarea id="q" placeholder="e.g. Charging holes with explosives on a bench in an opencast limestone mine while a dumper waits nearby"></textarea>
+    </div>
+    <div class="row2">
+      <div class="field"><label class="label" for="place">Place of work</label>
+        <select id="place"><option value="">Any</option></select></div>
+      <div class="field"><label class="label" for="mt">Mine type</label>
+        <select id="mt"><option value="">Any</option></select></div>
+    </div>
+    <div class="field">
+      <span class="label">Try an example</span>
+      <div class="chips" id="ex"></div>
+    </div>
+    <button class="go" type="submit">Find precedents</button>
+  </form>
+
+  <section class="out" id="out" aria-live="polite"></section>
+</main>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const STOP = new Set(D.stop);
+const KB = D.kb.map(r => Object.fromEntries(D.kbcols.map((c,i)=>[c,r[i]])));
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// sklearn TfidfVectorizer: lowercase, token_pattern \b\w\w+\b, english stop words, ngram (1,2), sublinear tf, l2
+function index(terms){ const m=new Map(); terms.forEach((t,i)=>m.set(t,i)); return m; }
+const CLF_IDX = index(D.clf.terms), RET_IDX = index(D.ret.terms);
+function vectorize(text, idx, idf){
+  const toks = (text.toLowerCase().match(/[\p{L}\p{N}_]{2,}/gu) || []).filter(t=>!STOP.has(t));
+  const grams = toks.slice(); for(let i=0;i<toks.length-1;i++) grams.push(toks[i]+" "+toks[i+1]);
+  const tf = new Map(); for(const g of grams){ const j=idx.get(g); if(j!==undefined) tf.set(j,(tf.get(j)||0)+1); }
+  let norm=0; const v=new Map();
+  for(const [j,c] of tf){ const w=(1+Math.log(c))*idf[j]; v.set(j,w); norm+=w*w; }
+  norm=Math.sqrt(norm)||1; for(const [j,w] of v) v.set(j,w/norm);
+  return v;
+}
+function classify(text){
+  const v = vectorize(text, CLF_IDX, D.clf.idf);
+  const z = D.clf.coef.map((row,k)=>{ let s=D.clf.intercept[k]; for(const [j,w] of v) s+=row[j]*w; return s; });
+  const mx=Math.max(...z), e=z.map(x=>Math.exp(x-mx)), sum=e.reduce((a,b)=>a+b,0);
+  return D.clf.classes.map((c,k)=>({hazard:c,p:e[k]/sum})).sort((a,b)=>b.p-a.p);
+}
+const DOCS = D.ret.docs.map(([ix,vals])=>{ const m=new Map(); ix.forEach((j,i)=>m.set(j,vals[i])); return m; });
+function search(text, {k=6, place="", mineType="", hazard=null, boost=0.1}={}){
+  const q = vectorize(text, RET_IDX, D.ret.idf);
+  const res=[];
+  KB.forEach((r,i)=>{
+    if(place && !(r.place===place || (place==="Opencast" && r.place==="Above Ground"))) return; if(mineType && r.mine_type!==mineType) return;
+    let s=0; const d=DOCS[i]; for(const [j,w] of q){ const x=d.get(j); if(x) s+=x*w; }
+    if(hazard && r.hazard===hazard) s+=boost;
+    res.push({r,score:s});
+  });
+  return res.sort((a,b)=>b.score-a.score).slice(0,k);
+}
+
+// Plain / Hindi words -> DGMS vocabulary, so short inputs still find good matches
+const PLAIN = [
+  [/\b(?:blast\w*|shot ?fir\w*|explosives?|barood|baarood|visphot|dhamaka|blasting)\b/, "blasting explosives shot holes charged holes detonator blaster shelter danger zone"],
+  [/\b(?:drill\w*|jack ?hammer|chhed|ched)\b/, "drilling holes jack hammer drill misfire socket charged hole"],
+  [/\b(?:misfire\w*|sockets?)\b/, "misfire socket charged hole drilling"],
+  [/\b(?:trucks?|lorr(?:y|ies)|dumpers?|tippers?|haulers?|hywa|hyva|vehicles?|ga+di|ga+ri)\b/, "tipper dumper truck haul road driver vehicle"],
+  [/\b(?:driv\w*|chala\w*)\b/, "driver tipper dumper vehicle haul road"],
+  [/\b(?:roads?|sa?dak|rasta)\b/, "haul road tipper dumper"],
+  [/\b(?:revers\w*|back ?gear|peeche)\b/, "reverse reversing dumper tipper"],
+  [/\b(?:belts?|conveyors?|patta)\b/, "belt conveyor pulley drum"],
+  [/\b(?:cage|shaft|winding|lift|skip)\b/, "cage shaft winding skip"],
+  [/\b(?:roofs?|chh?a+t|chhath|chocks?|goaf|depillaring|supports?|bolt\w*)\b/, "roof fall of roof roof support gallery"],
+  [/\b(?:walls?|sides?|de+war|di+var|diwar|deewar)\b/, "sides fall of sides bench highwall loose parted mass"],
+  [/\b(?:stones?|rocks?|boulders?|patt?h?ar|pathar|chattan)\b/, "stone boulder loose parted mass fall of sides sides"],
+  [/\b(?:fall\w*|fell|gir\w*)\b/, "FALL"],
+  [/\b(?:bench\w*|pits?|khadan|quarr(?:y|ies)|mine face)\b/, "bench highwall sides loose fall of sides opencast quarry slope"],
+  [/\b(?:dump\w*)\b/, "dump edge dumper tipper"],
+  [/\b(?:wires?|ta+r|cables?)\b/, "electric cable live shock"],
+  [/\b(?:current|kar[ae]nt|shock|jhatka)\b/, "electric shock live"],
+  [/\b(?:bijli|light|lights|lamp|switch\w*|transformer|fuse|electrician\w*|kv|joint|earthing)\b/, "electric electrical cable switch live shock"],
+  [/\b(?:ladders?|s[ie]+dhi)\b/, "ladder fell height slipped"],
+  [/\b(?:heights?|upar|climb\w*|roof top|gantry|scaffold\w*)\b/, "height fell from height slipped platform"],
+  [/\b(?:slip\w*|fisal\w*)\b/, "slipped fell lost balance"],
+  [/\b(?:excavators?|shovels?|jcb|poclain|pokla[ie]n|loaders?|loads?|loading|dozers?)\b/, "excavator shovel loading machine bucket operator"],
+  [/\b(?:machines?|machinery|repair\w*|maintenance|mechanic|fitter)\b/, "machine machinery operator maintenance"],
+  [/\b(?:weld\w*|cutting|gas cutter|hot work)\b/, "welding gas cutting fire burn tank"],
+  [/\b(?:fires?|aag|burn\w*|jal\w*)\b/, "fire burn injuries explosion"],
+  [/\b(?:gas|methane|ventilation|hawa|smoke|dhuan)\b/, "methane gas atmosphere irrespirable ventilation"],
+  [/\b(?:water|pa+ni|ponds?|talab|sumps?|floods?|swim\w*|doob\w*|drown\w*)\b/, "water drowned pond sump"],
+  [/\b(?:pumps?|pontoon)\b/, "pump pontoon water"],
+  [/\b(?:underground|neeche|andar)\b/, "belowground underground gallery"],
+];
+const VOCAB = new Set([...D.clf.terms, ...D.ret.terms]);
+function stemFix(tok){ if(VOCAB.has(tok)) return tok; for(const suf of ["ing","ed","es","s","er"]){ if(tok.endsWith(suf)){ const b=tok.slice(0,-suf.length); if(VOCAB.has(b)) return b; if(VOCAB.has(b+"e")) return b+"e"; } } return tok; }
+function expand(text){
+  const low=text.toLowerCase(), words=(low.match(/[\p{L}\p{N}_]+/gu)||[]);
+  const add=[]; for(const [re,terms] of PLAIN) if(re.test(low)) add.push(terms);
+  const ground=/\b(?:stones?|rocks?|boulders?|patt?h?ar|chattan|walls?|sides?|de+war|di+var|bench\w*|roofs?|chh?a+t|highwall)\b/.test(low);
+  const i=add.indexOf("FALL"); if(i>=0) add[i]=ground?"fall of sides parted":"fell";
+  if(ground){ for(let j=0;j<words.length;j++) if(/^(?:fall\w*|fell|gir\w*)$/.test(words[j])) words[j]="parted"; }
+  // short inputs lean on the dictionary; long sentences mostly speak for themselves
+  const fixed=words.map(stemFix).join(" ");
+  return words.length>=10 ? `${text} ${add.join(" ")}` : `${fixed} ${fixed} ${add.join(" ")}`;
+}
+
+// UI
+for(const p of D.places){ if(p==="Above Ground") continue; $("place").add(new Option(p==="Opencast"?"Opencast":p,p)); }
+for(const m of D.mine_types) $("mt").add(new Option(m.replace(/ \(DGMS.*\)/," (metalliferous)"),m));
+const EXAMPLES = [
+  ["Drilling holes on a bench near an old blasted area in an opencast granite quarry","Opencast",""],
+  ["Support crew erecting chocks at the goaf edge of a depillaring panel in an underground coal mine","Below Ground","Coal"],
+  ["Dumper reversing near the edge of a dump yard at night with poor lighting","Opencast",""],
+  ["Electrician working on a 3.3 kV cable joint near the conveyor drive","",""],
+  ["Gas testing before blasting in a degree III gassy seam","Below Ground","Coal"],
+  ["Worker cleaning spillage under a running belt conveyor at the transfer point","",""]
+];
+EXAMPLES.forEach(([t,p,m])=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=t.length>48?t.slice(0,46)+"…":t; b.title=t;
+  b.onclick=()=>{ $("q").value=t; $("place").value=p; $("mt").value=m; run(); }; $("ex").append(b); });
+
+const M=D.metrics;
+
+
+let last=null, ctl=null;
+function confClass(p){ return p>=0.35?"hi":p>=0.2?"mid":"lo"; }
+function confWord(p){ return p>=0.35?"Strong match":p>=0.2?"Moderate":"Weak, check alternatives"; }
+function cut(s,n){ s=s.trim(); if(s.length<=n) return s; const t=s.slice(0,n); return t.slice(0,t.lastIndexOf(" "))+"…"; }
+function titleCase(s){ return String(s).toLowerCase().replace(/\b([a-z])/g,c=>c.toUpperCase()); }
+function shortMeasure(s){
+  s=s.split(/[,;]?\s*(?:as required|as per (?:the )?(?:provision|regulation|reg)|in accordance with (?:the )?(?:provision|regulation|reg)|in compliance|under the provisions?|as stipulated|as laid down|thus (?:not )?negligently|thus not|in contravention|which was required)/i)[0];
+  s=s.replace(/^(?:it|it has)\s+been\s+ensured\s+that\s+/i,"Ensure that ").replace(/\s*\(.*?Regulations?.*?\)/g,"").replace(/[\s,;.]+$/,"");
+  return cut(s.charAt(0).toUpperCase()+s.slice(1),150);
+}
+function shortSit(s){
+  let t=s.split(/,?\s*(?:due to which|inflicting|causing (?:him|her|them|serious|fatal|grievous)|resulting in|which proved fatal|who succumbed|to which)/i)[0];
+  if(t.length<50) t=s;
+  t=cut(t.replace(/[\s,;.]+$/,"").replace(/,?\s*thereby$/i,""),190);
+  return /[.…]$/.test(t)?t:t+".";
+}
+// Group DGMS "Had..." findings from the matched accidents into plain-language points
+const THEMES = [
+  ["misfire",  /misfire|socket/i, "Before drilling, wash down and examine the rock for misfired holes and sockets. Never drill into or near an old hole."],
+  ["shelter",  /shelter|danger zone|before (?:the )?firing|withdrawn .*blast|blast.*withdrawn|warning signal/i, "Before blasting, clear everyone out of the danger zone and make sure they are in proper shelter. Give the warning signal."],
+  ["blaster",  /\bblasters?\b|shot ?firer|\bcharg(?:ing|ed)\b.*(?:hole|explosive)|\bexplosives?\b|detonat|stemm/i, "Only a trained, authorised blaster should handle, charge and fire explosives, following the blasting rules."],
+  ["gas",      /\bgas\b|methane|ventilat|irrespirable|flame ?proof|hot work|welding|gas cutting|\bfires?\b/i, "Test for gas and make sure ventilation is good before entering or doing any hot work. Keep fire-fighting equipment ready."],
+  ["electric", /\belectric(?:al|ity)?\b(?! rules)|\bearth(?:ing|ed)\b|\blive\b|\bcables?\b|insulat|overhead lines?|voltage|\bkv\b|\bswitch/i, "Treat all wires as live. Switch off, isolate and earth the supply before working, and keep clear of overhead lines."],
+  ["water",    /(?<!with )\bwater\b(?! tanker)|\bponds?\b|\bsumps?\b|drown|inundat|pontoon|life ?jacket/i, "Fence and mark ponds, sumps and old flooded workings. Do not go near water without permission and a life jacket."],
+  ["roof",     /\broof\b|systematic support|\bssr\b|\bcogs?\b|\bchocks?\b|roof bolt|\bprops?\b/i, "Keep the roof and sides supported as per the Systematic Support Rules before anyone works under them."],
+  ["loose",    /\bdress(?:ed|ing)?\b|\bloose\b|overhang|under ?cut|made safe/i, "Check and dress loose stones and overhangs before starting. Keep loose material at least 3 m back from the bench edge."],
+  ["bench",    /\bbench(?:es)?\b|\bslopes?\b|highwall|high wall/i, "Keep benches at the permitted height, width and slope. Do not undercut, and stay away from the bench edge."],
+  ["height",   /safety belt|harness|\bladders?\b|working at height|from height|\bat a height|railing|hand ?rails?|scaffold/i, "When working at height, wear a safety belt or harness and use proper platforms, ladders and handrails."],
+  ["guard",    /\bfenc|\bguard/i, "Fence and guard all moving parts (drums, pulleys, belts). Never clean or reach in while the machine is running."],
+  ["isolate",  /isolat|switched off|\bstopp?ed\b|\block(?:ed|ing)? ?out\b|permit to work|shut ?down|de-?energi|immobil/i, "Stop the machine and isolate the power (lock it off) before repair, cleaning or freeing a jam. Use a permit to work."],
+  ["proximity",/proximity|vicinity|blind ?spot|\bswing|no person|presence of (?:any )?person|run over|reach of/i, "Keep people out of the working range and blind spots of moving machines. Look all around before moving."],
+  ["reverse",  /\brevers|\balarm|\bhorn\b|camera|banksman|spotter/i, "Use the reversing alarm and horn, and have a spotter when reversing or working in tight spaces."],
+  ["road",     /\bhaul ?roads?\b|\broads?\b|traffic|\bberms?\b|parapet|gradient|\bspeed|\bply\b/i, "Keep haul roads wide, with gentle gradients, berms and traffic rules. Keep walkers and small vehicles away from dumpers."],
+  ["vehicle",  /\bbrakes?\b|defect|fit condition|seat ?belt|\btyres?\b|steering/i, "Check brakes and the vehicle's condition before every shift. Never use a defective machine, and wear the seat belt."],
+  ["light",    /illuminat|\blighting\b/i, "Make sure the workplace has enough lighting, especially at night."],
+  ["train",    /\btrain(?:ed|ing)\b|\bcompetent\b|authori[sz]ed|qualified (?:driver|operator)|licen[cs]e|vocational/i, "Only trained, competent and authorised people should operate the machine or do the job."],
+  ["sop",      /\bsop\b|safe operating|code of practice|\bcop\b|\bsmp\b|safety management plan|risk assess/i, "Follow the written SOP or code of practice for this job (from the mine's Safety Management Plan)."],
+  ["supervise",/supervis|mining mate|foreman|overman|sirdar|competent person in charge/i, "Work only with a supervisor present: a Foreman, Mining Mate or Overman must be in charge and watching the job."],
+  ["manager",  /manager|statutory officials?|placed under the charge|management, control/i, "Make sure the mine has a qualified manager and the required statutory officials appointed."],
+];
+function themesOf(m){ m=m.split(/[,;]?\s*(?:as required|under the provisions?|in accordance with the provisions?|thus (?:not )?negligently|in contravention)/i)[0]; const out=[]; for(const [key,re] of THEMES){ if(re.test(m)){ out.push(key); if(out.length===2) break; } } return out; }
+function topMeasures(hits, n=5){
+  const agg=new Map();
+  hits.forEach(({r,score},rank)=>{
+    const w=Math.max(score,0.01)*(1-rank*0.08), seen=new Set();
+    for(const m of r.measures.split("|").map(x=>x.trim()).filter(Boolean)){
+      const ks=themesOf(m); const regs=(m.match(/Reg(?:ulation)?s?\.?\s*(?:No\.?\s*)?\d+(?:\(\w+\))*/gi)||[]).map(x=>"Reg "+x.match(/\d+(?:\(\w+\))*/)[0]).filter(x=>!/^Reg (?:19|20)\d\d$/.test(x));
+      for(const k of ks){
+        const a=agg.get(k)||{k,w:0,ids:new Set(),regs:new Set()};
+        if(!seen.has(k)){ a.w+=w; seen.add(k); }
+        a.ids.add(r.id); regs.forEach(x=>a.regs.add(x)); agg.set(k,a);
+      }
+      if(!ks.length){ const k="x:"+m.slice(0,40); if(!agg.has(k)) agg.set(k,{k,w:w*0.6,ids:new Set([r.id]),regs:new Set(regs),text:shortMeasure(m)}); }
+    }
+  });
+  const T=Object.fromEntries(THEMES.map(([k,,t])=>[k,t]));
+  const all=[...agg.values()].sort((a,b)=>b.w-a.w); const strong=all.filter(a=>a.ids.size>=2), weak=all.filter(a=>a.ids.size<2);
+  return [...strong,...weak].slice(0,Math.max(3,Math.min(n,strong.length||3))).map(a=>({text:a.text||T[a.k],ids:[...a.ids],regs:[...a.regs].slice(0,3)}));
+}
+
+function measuresHTML(s){ return s.split("|").map(x=>x.trim()).filter(Boolean).map(x=>`<li><em>Had</em>${esc(x)}</li>`).join(""); }
+
+function run(){
+  const text=$("q").value.trim(), place=$("place").value, mt=$("mt").value;
+  const out=$("out");
+  if(text.length<2){ out.innerHTML=`<div class="empty">Type the job you are going to do, for example: blasting, truck, roof, wire, water.</div>`; return; }
+  const q=expand(text), probs=classify(q), hz=probs[0];
+  const hits=search(q,{place,mineType:mt,hazard:hz.hazard});
+  last={text,place,mt,probs,hits};
+  const bars=probs.slice(0,4).map((c,i)=>`<div class="bar ${i===0?"top":""}"><span>${esc(c.hazard)}</span><span class="p">${(c.p*100).toFixed(0)}%</span><div class="track"><div class="fill" style="width:${(c.p*100).toFixed(1)}%"></div></div></div>`).join("");
+  const cases=hits.length?hits.map(({r,score})=>{
+    const ms=r.measures.split("|").map(x=>x.trim()).filter(Boolean);
+    const regs=[...new Set((r.regulations.match(/Reg \d+(?:\(\w+\))*|Sec(?:tion)? \d+(?:\(\w+\))*/g)||[]))].slice(0,4);
+    return `
+    <article class="case">
+      <div class="case-top"><span class="rid">${esc(r.id)}</span><span class="mine">${esc(titleCase(r.mine_name))}</span>
+        <span class="meta">${esc(String(r.year))} · ${esc(r.mineral)} · ${esc(r.place)}</span>
+        <span class="killed">${r.persons_killed} killed</span></div>
+      <dl class="brief">
+        <dt>What happened</dt><dd>${esc(shortSit(r.situation))}</dd>
+        <dt>Key lesson${ms.length>1?"s":""}</dt><dd><ul class="lessons">${ms.slice(0,2).map(m=>`<li>${esc(shortMeasure(m))}</li>`).join("")}</ul></dd>
+        ${regs.length?`<dt>Rules</dt><dd class="regs">${regs.map(x=>`<span>${esc(x)}</span>`).join("")}</dd>`:""}
+      </dl>
+      <details><summary>Full DGMS record${ms.length>2?` · ${ms.length} findings`:""}</summary>
+        <div class="full">
+          <div class="meta">${esc(r.mine_name)} · ${esc(r.date)} · ${esc(r.state)} · ${esc(r.cause_group)} → ${esc(r.cause_subgroup)} <span class="score">· similarity ${score.toFixed(2)}</span></div>
+          <p class="sit">${esc(r.situation)}</p>
+          <div class="label">DGMS: the accident could have been averted…</div>
+          <ul class="measures">${measuresHTML(r.measures)}</ul>
+          <div class="foot"><span>Regulations <b>${esc(r.regulations)}</b></span><span>${esc(r.statutes_cited)}</span><span>${esc(r.source_document)}, PDF p.${esc(r.source_page)}</span></div>
+        </div>
+      </details>
+    </article>`}).join(""):`<div class="empty">No records match those filters. Set Place or Mine type to Any.</div>`;
+  out.innerHTML=`
+    <div class="hazard">
+      <div><div class="label">Most likely hazard</div><div class="hz-name">${esc(hz.hazard)}</div>
+        <span class="conf ${confClass(hz.p)}">${(hz.p*100).toFixed(0)}% · ${confWord(hz.p)}</span></div>
+      <div class="bars" aria-label="Hazard probabilities">${bars}</div>
+    </div>
+    <div class="todo">
+      <div class="sec-h"><h2>Most important preventive measures</h2><span class="label">From the ${hits.length} closest accidents</span></div>
+      <ol class="todo-list">${topMeasures(hits).map(m=>`<li><span class="todo-t">${esc(m.text)}</span></li>`).join("")}</ol>
+    </div>
+    <div class="advice" id="adv" hidden>
+      <div class="sec-h"><h2>More recommendations</h2></div>
+      <div class="advice-body" id="advBody"></div>
+      <div class="btns"><button type="button" class="btn2" id="advGo">Get more recommendations</button><button type="button" class="btn2" id="advStop" hidden>Stop</button></div>
+      <p class="note" id="advNote"></p>
+    </div>
+    <div class="sec-h"><h2>Closest past accidents</h2><span class="label">${hits.length} of ${KB.length}${place||mt?" · filtered":""}</span></div>
+    <div class="cases">${cases}</div>`;
+  wireAdvice();
+}
+
+let sample=null;
+function wireAdvice(){
+  const box=$("adv"); if(!box) return;
+  box.hidden=!sample || !last.hits.length;
+  $("advGo").onclick=askClaude; $("advStop").onclick=()=>ctl?.abort();
+}
+function buildPrompt(){
+  const shown=topMeasures(last.hits).map((m,i)=>`${i+1}. ${m.text}`).join("\n");
+  const recs=last.hits.map(({r})=>`[${r.id}] ${r.year}, ${r.place}, ${r.mine_type}, ${r.mineral}. Cause: ${r.cause_group} / ${r.cause_subgroup}.
+What happened: ${r.situation}
+DGMS: the accident could have been averted had ${r.measures.split("|").map(s=>s.trim()).join("; had ")}
+Regulations: ${r.regulations}`).join("\n\n");
+  return `You are a mine-safety assistant for Indian mines, writing for a miner in simple English.
+
+The miner's job: ${last.text}
+Place: ${last.place||"not stated"} | Mine type: ${last.mt||"not stated"}
+Likely hazard: ${last.probs[0].hazard}
+
+The miner has ALREADY been shown these preventive measures:
+${shown}
+
+Your task: give 5 to 7 OTHER preventive measures for this job that are NOT in the list above. Do not repeat or reword any of them, and do not give general advice that one of them already covers (for example, if supervision is listed, do not suggest supervision again).
+
+Draw first on the past DGMS fatal-accident findings below, picking findings the list above does not cover. Then you may add practical steps specific to this job (checks before starting, what to watch for while working, when to stop and tell the supervisor).
+
+Past accidents:
+${recs}
+
+Format: plain text, a numbered list only, one short sentence per point in simple words, no headings, no bold, no record ids, no regulation numbers, no introduction and no closing line.`;
+}
+async function askClaude(){
+  const go=$("advGo"), stop=$("advStop"), body=$("advBody"), note=$("advNote");
+  ctl=new AbortController(); go.disabled=true; stop.hidden=false; body.textContent="Thinking…";
+  try{
+    const {truncated}=await sample(buildPrompt(),{cache:false,signal:ctl.signal,onText:({text})=>{body.textContent=text;}});
+    note.textContent=truncated?"The answer was cut short. Try a shorter situation.":"";
+    go.textContent="Get different recommendations";
+  }catch(e){
+    body.textContent=e.text??"";
+    const msg={not_granted:"Claude access was not allowed for this page.",sampling_disabled:"Claude is not available for this account.",rate_limited:"Too many requests just now. Try again in a minute.",session_expired:"Sign in to Claude again, then retry.",refused:"Claude declined this request. Rephrase the situation."}[e.code];
+    if(e.code==="not_granted"||e.code==="sampling_disabled"||e.code==="not_declared"){ $("adv").hidden=true; sample=null; }
+    else if(e.code!=="cancelled") note.textContent=msg||"The request failed. Try again.";
+  }finally{ go.disabled=false; stop.hidden=true; }
+}
+
+$("f").addEventListener("submit",e=>{e.preventDefault();run();});
+$("q").value=EXAMPLES[0][0]; $("place").value=EXAMPLES[0][1]; run();
+(async()=>{ try{ sample=await window.claude?.use?.("sample"); }catch{ sample=null; } if(last) wireAdvice(); })();
+</script>

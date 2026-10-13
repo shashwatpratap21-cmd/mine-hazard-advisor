@@ -163,7 +163,7 @@ Earlier regression scripts were also rerun and still pass:
 
 - `build_explosion.py` and `build_site.py` run cleanly; `build_model.py` reproduces `model.json` exactly.
 - Required data files are in the repository. The page uses no absolute local paths and needs no server.
-- Deployment status is recorded in the commit that adds this report and is confirmed in the reply that accompanies it.
+- **Deployment:** pushed to `main` as commit e242011, and the remote branch was confirmed to hold it. Five minutes after the push, the GitHub Pages site was still serving the previous revision (old tagline), so **live verification of this revision is outstanding**. The Claude-hosted copy of the site was republished with the same build. The audit environment cannot open github.io directly; it was checked through a web fetch, which may itself be cached.
 
 ### Remaining defects and open items
 

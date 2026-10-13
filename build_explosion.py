@@ -121,11 +121,15 @@ def sanket_category(std, mine_type):
     if s == "Coal dust explosion":
         return TAXONOMY[1]
     if s == "Damp/coal dust explosion":
-        return TAXONOMY[2]
+        # DGMS "Explosions of damp/coal dust" means firedamp OR coal dust; it does not establish a combined explosion
+        return GASDUST if coal else TAXONOMY[6]
     if s == "Gas/dust explosion/ignition (type not specified)":
         return GASDUST if coal else TAXONOMY[6]
     if s == "Explosion (type not specified)":
         return UNSPEC
+    if s == "Hydrocarbon/vapour explosion in vessel (hot work)":
+        # hot work is reported for only some of these records, so the mapped name does not assert it
+        return "Outside taxonomy: Hydrocarbon/vapour explosion in vessel"
     return "Outside taxonomy: " + s
 
 
@@ -207,7 +211,7 @@ def main():
     need = ["accident_id", "record_type", "is_primary_record", "duplicate_of", "source_document", "source_pdf_page", "source_printed_page",
             "source_table_ref", "date_as_printed", "year", "mine_name", "state", "district", "mineral", "mine_type_std", "place_per_source_statement",
             "source_cause_label", "explosion_category_std", "explosion_family", "ignition_source_reported", "reported_cause", "cause_status",
-            "fatalities", "seriously_injured", "core_explosion_flag", "verification_notes"]
+            "fatalities", "seriously_injured", "core_explosion_flag", "verification_notes", "data_flag"]
     miss = [c for c in need if c not in sx.columns]
     if miss: fail(f"Accident_Database is missing columns {miss}")
     if not sx["accident_id"].is_unique: fail("Accident_Database has duplicate accident_id values")
@@ -241,10 +245,10 @@ def main():
             "place": str(d["place"]) if d is not None else str(nz(r.place_per_source_statement, "Not reported")),
             "cause_label": str(nz(r.source_cause_label)), "cat_std": str(nz(r.explosion_category_std)), "xcat": r.xcat,
             "ignition": str(nz(r.ignition_source_reported)), "reported_cause": str(nz(r.reported_cause)), "cause_status": str(nz(r.cause_status)),
-            "killed": int(nz(r.fatalities, 0)), "injured": int(nz(r.seriously_injured, 0)),
+            "killed": int(nz(r.fatalities, 0)), "injured": (None if nz(r.seriously_injured, None) is None else int(r.seriously_injured)),
             "situation": str(d["situation"]) if d is not None else "", "findings": findings,
             "regulations": str(nz(d["regulations"], "")) if d is not None else "", "statutes": str(nz(d["statutes_cited"], "")) if d is not None else "",
-            "notes": str(nz(r.verification_notes)), "also_listed": also_listed.get(r.accident_id, ""),
+            "notes": str(nz(r.verification_notes)), "flag": str(nz(r.data_flag)), "also_listed": also_listed.get(r.accident_id, ""),
         })
     sk_log = (f"SANKET explosion workbook {sk.name}: {len(sx)} rows ({int((sx.kind=='narrative').sum())} narratives, {int((sx.kind=='list').sum())} major-accident list rows); "
                f"{len(dups)} flagged duplicates removed ({', '.join(f'{r.accident_id}→{r.duplicate_of}' for r in dups.itertuples())}); "
@@ -368,12 +372,12 @@ def main():
          "## 1. Data import and validation", ""] + [f"- {x}" for x in log] + [
          "- Mine-type context per category: " + "; ".join(f"{k}: {', '.join(v)}" for k, v in mt_ctx.items()) + ".",
          "- Labels are the workbook's *suggested* categories; the Data_Dictionary says expert validation is required. Some overlap is visible, for example scenarios labelled Coal-Dust that describe a methane ignition raising dust, and Metal Mine scenarios that describe blasting events.",
-         "", "## 2. Historical DGMS records mapped to the taxonomy", "",
+         "", "## 2. The 610 DGMS narratives (2016–2022) mapped to the taxonomy", "",
          f"- Historical records searched: {len(hist)}; core explosion events (from the project's DGMS coding): {int(truth.sum())}.",
          "- A record gets a taxonomy category only when its DGMS-derived explosion label supports it:", ""]
     for k, v in hist["xcat"].value_counts().items():
         L.append(f"  - {k}: {v}")
-    L += ["", "- No historical records exist for Coal-Dust, Combined Methane and Coal-Dust, Electrical or Mechanical Ignition, or Spontaneous Heating. For those situations the app shows synthetic scenarios and says no historical record matched.",
+    L += ["", "- None of the 2016–2022 narratives is a Coal-Dust, Combined Methane and Coal-Dust, Electrical or Mechanical Ignition, or Spontaneous Heating explosion. The SANKET major-accident list (1901–2010, cause label only) adds older gas and coal-dust explosions; see section 6. No historical record of any period is classified as Combined, Electrical/Mechanical Ignition or Spontaneous Heating; for those the app says no historical record of the category exists and shows related records and synthetic scenarios separately.",
           "", "## 3. Explosion-category classifier (trained on the 200 synthetic scenarios)", "",
           f"- Model: TF-IDF (1–2 grams, sublinear tf, English stop words) + Logistic Regression (class_weight=balanced), C = {C} chosen by 5-fold stratified CV on macro-F1.",
           f"- Synthetic-only model, 5-fold stratified cross-validation on synthetic data: accuracy **{cv_acc:.3f}**, macro-F1 **{cv_f1:.3f}** (table below).",
@@ -410,7 +414,7 @@ def main():
     for c, g in hdf.groupby("xcat"):
         f = lambda s, k: int(((g.src.str.startswith(s)) & (g.kind == k)).sum())
         L.append(f"| {c} | {f('Coal','narrative')} | {f('Coal','list')} | {f('Non','narrative')} | {f('Non','list')} |")
-    L += ["", "Mapping rule: blasting and explosives labels → Blasting; firedamp / inflammable-gas labels → Methane in coal mines, Metal Mine category in non-coal mines; 'Coal dust' → Coal-Dust; 'Damp/coal dust' → Combined; unspecified gas/dust → its own label (related to Methane, Coal-Dust and Combined); 'Explosion (type not specified)' → its own label; hot-work vapour, cylinder and borderline fuel/gas-cloud events → 'Outside taxonomy'.",
+    L += ["", "Mapping rule: blasting and explosives labels → Blasting; firedamp / inflammable-gas labels → Methane in coal mines, Metal Mine category in non-coal mines; 'Coal dust' → Coal-Dust; 'Damp/coal dust' (DGMS: firedamp or coal dust) → Gas or coal-dust, type not recorded; unspecified gas/dust → its own label (related to Methane, Coal-Dust and Combined); 'Explosion (type not specified)' → its own label; hydrocarbon/vapour explosions in vessels (hot work reported for some, not all), cylinder and borderline fuel/gas-cloud events → 'Outside taxonomy'.",
           f"- Major-accident list rows carry only a cause label (no narrative, no findings): {int((hdf.kind=='list').sum())} records. The app says so on each card and never states a cause beyond the label.",
           f"- Narratives without printed DGMS findings: {', '.join(h['id'] + ' (' + h['dgms_id'] + ')' for h in hrec if h['kind']=='narrative' and not h['findings'])}.",
           "", "## 7. Reference books and the guidance extracted", "",

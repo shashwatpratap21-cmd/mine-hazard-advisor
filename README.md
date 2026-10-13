@@ -1,6 +1,6 @@
 # Mine Hazard Advisor
 
-Type the job you are about to do in a mine (a sentence, or just a word like "truck", "blasting", "methane", "chhat") and the site shows:
+Part of the project **"Predictive Analysis of Coal and Metal Mining Accidents Pertaining to Explosions from the Data Across Mines."** Describe a mining work situation (for example methane building up after a fan stops, dry coal dust on a belt roadway, or drilling near a misfired hole) and the site shows:
 
 - **Most likely hazard**: one of 8 DGMS cause groups (TF-IDF + Logistic Regression)
 - **Explosion analysis** (only when the description contains explosion evidence): the predicted explosion mechanism, the words behind it, mine context, and whether the text describes a potential hazard or an explosion event
@@ -19,7 +19,7 @@ Everything runs in the browser. There is no server and nothing you type leaves t
 | C. Synthetic explosion scenarios | `data/explosion_specific_mining_scenarios_200.xlsx` | 200 generated scenarios; training and a separate labelled list only, never evidence |
 | D. Reference-book guidance | `data/reference_guidance.json` | 23 preventive measures from Ramlu, *Mine Disasters and Mine Rescue*, and Cheng, *Explosions in Underground Coal Mines* (2018), each with section, printed page and whether the book states it or it is derived from a case |
 
-Historical records carry the label **Historical — DGMS source** (traceable to the PDF page shown, not individually re-verified). Synthetic rows carry **Synthetic — training scenario**, plus **Potential hazard — not a confirmed explosion** when the text describes a condition rather than an event.
+Historical records carry the label **Historical — DGMS source** (traceable to the PDF page shown; all 87 explosion records were checked against the SANKET PDFs in the final audit, see [`reports/final_audit.md`](reports/final_audit.md)). Synthetic rows carry **Synthetic — training scenario**, plus **Potential hazard — not a confirmed explosion** when the text describes a condition rather than an event.
 
 ## Preventive measures in explosion mode
 
@@ -35,14 +35,14 @@ The list is ordered by how many of the matched accidents support each measure, a
 
 Methane / Firedamp · Coal-Dust · Combined Methane and Coal-Dust · Blasting and Explosives-Related · Electrical or Mechanical Ignition of Explosive Atmosphere · Spontaneous Heating, Fire and Explosion Escalation · Metal Mine: Gas, Dust and Other Mechanisms.
 
-Historical DGMS records cover only two of these (27 blasting, 1 methane). For the others the site shows related mechanisms or synthetic scenarios and says so.
+The 87 SANKET explosion records fall under Blasting (42), Methane / Firedamp (22), Coal-Dust (1) and Metal Mine (1), plus records whose type DGMS did not record (10 gas or coal dust, 6 explosion) and five outside the taxonomy (hydrocarbon/vapour in a vessel, gas cylinder). No historical record is classified as Combined, Electrical/Mechanical Ignition or Spontaneous Heating; for those the site says so and shows related records.
 
 ## Models and evaluation
 
 See [`reports/explosion_evaluation.md`](reports/explosion_evaluation.md) for every number and the full source/guidance tables, and [`reports/explosion_validation.md`](reports/explosion_validation.md) for the 10-case validation run.
 
 - DGMS hazard classifier: 70.5% accuracy / 0.62 macro-F1 on unseen 2021–22 accidents (23% majority baseline).
-- Explosion-category classifier: trained on 200 synthetic + 28 historical narratives; synthetic-only 5-fold CV macro-F1 0.66; synthetic-only model on real DGMS explosion narratives 85.7% (out-of-domain, mostly one class).
+- Explosion-category classifier: trained on 200 synthetic + 29 historical SANKET narratives; synthetic-only 5-fold CV accuracy 0.685, macro-F1 0.662; synthetic-only model on the 29 real narratives 86.2% (out-of-domain, essentially one class). In the page, a metal-mine description that names explosives or blasting and no gas or dust is shown as Blasting (SANKET's convention) even when the classifier's top class is Metal Mine; the panel says when this happens.
 - Explosion-evidence gate on 610 historical narratives: precision 0.79, recall 0.87.
 
 ## Build

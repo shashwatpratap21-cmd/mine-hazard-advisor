@@ -215,12 +215,22 @@ details.more summary:hover{color:var(--text)}
 .gev b{color:var(--text);font-weight:500}
 .glabel{margin-top:6px!important;font:600 .78rem/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
 
-/* view switch */
-.views{margin-left:auto;display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--inset)}
-.views button{font:600 .98rem/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);background:transparent;border:0;border-radius:7px;padding:10px 14px;cursor:pointer}
-.views button:hover{color:var(--text)}
-.views button[aria-pressed="true"]{color:var(--text);background:var(--surface-2);box-shadow:inset 0 -2px 0 var(--amber)}
-@media (max-width:640px){header{flex-wrap:wrap}.views{margin-left:0;width:100%}.views button{flex:1}}
+/* view switch: segmented navigation */
+header{justify-content:flex-start}
+.views{margin-left:auto;align-self:center;display:flex;align-items:stretch;gap:2px;height:46px;padding:3px;
+  border:1px solid rgba(255,255,255,.09);border-radius:9px;background:rgba(11,16,20,.55)}
+.views [role="tab"]{position:relative;display:flex;align-items:center;justify-content:center;padding:0 16px;border:0;border-radius:6px;cursor:pointer;
+  font:600 .98rem/1 var(--display);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;color:#8C9DA8;background:transparent;
+  transition:color .18s ease,background-color .18s ease}
+.views [role="tab"]::after{content:"";position:absolute;left:14px;right:14px;bottom:3px;height:2px;border-radius:1px;background:var(--amber);
+  opacity:0;transform:scaleX(.4);transition:opacity .18s ease,transform .18s ease}
+.views [role="tab"]:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.views [role="tab"][aria-selected="true"]{color:#fff;background:rgba(255,255,255,.06)}
+.views [role="tab"][aria-selected="true"]::after{opacity:1;transform:none}
+.views [role="tab"]:focus-visible{outline:2px solid var(--amber-hi);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){.views [role="tab"],.views [role="tab"]::after{transition:none}}
+@media (max-width:640px){header{flex-wrap:wrap;row-gap:var(--s3)}header>div{flex:1 1 0;min-width:0}.views{margin-left:0;flex-basis:100%;height:44px}.views [role="tab"]{flex:1 1 0;min-width:0;padding:0 10px;font-size:.92rem;letter-spacing:.08em}}
+@media (max-width:380px){.views [role="tab"]{padding:0 6px;font-size:.84rem;letter-spacing:.05em}}
 
 /* explosion causes analytics */
 .cz{display:grid;gap:var(--s5);margin-top:var(--s5)}
@@ -276,10 +286,10 @@ details.more summary:hover{color:var(--text)}
     <h1>Mine Hazard Advisor</h1>
     <p class="tag">Evidence-backed mining hazard intelligence.</p>
   </div>
-  <nav class="views" aria-label="Views"><button type="button" data-view="advisor" aria-pressed="true">Advisor</button><button type="button" data-view="causes" aria-pressed="false">Explosion causes</button></nav>
+  <nav class="views" role="tablist" aria-label="Application views"><button type="button" role="tab" id="tab-advisor" data-view="advisor" aria-selected="true" aria-controls="advisorView" tabindex="0">Advisor</button><button type="button" role="tab" id="tab-causes" data-view="causes" aria-selected="false" aria-controls="causes" tabindex="-1">Explosion causes</button></nav>
 </header>
 
-<main>
+<main id="advisorView" role="tabpanel" aria-labelledby="tab-advisor">
   <form id="f" class="card" autocomplete="off" aria-label="Describe the job">
     <p class="form-h">Describe the job</p>
     <div class="field">
@@ -302,7 +312,7 @@ details.more summary:hover{color:var(--text)}
   <section class="out" id="out" aria-live="polite"></section>
 </main>
 
-<section class="cz" id="causes" hidden aria-labelledby="czTitle">
+<section class="cz" id="causes" hidden role="tabpanel" aria-labelledby="tab-causes">
   <div class="cz-h"><h2 id="czTitle">Explosion Causes Across Mines</h2>
     <p>Distribution of documented explosion causes in the available accident records.</p></div>
   <div class="cz-f card">
@@ -1138,13 +1148,17 @@ function czRender(){
 }
 function setView(v){
   const c=v==="causes";
-  document.querySelectorAll(".views button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.view===v)));
+  document.querySelectorAll(".views [role=tab]").forEach(b=>{ const on=b.dataset.view===v; b.setAttribute("aria-selected",String(on)); b.tabIndex=on?0:-1; });
   document.querySelector("main").hidden=c; $("causes").hidden=!c;
   if(c) czRender();
   try{ history.replaceState(null,"",c?"#causes":location.pathname+location.search); }catch{}
 }
 czInitYears();
-document.querySelectorAll(".views button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+document.querySelectorAll(".views [role=tab]").forEach(b=>{ b.onclick=()=>setView(b.dataset.view);
+  b.onkeydown=e=>{ const tabs=[...document.querySelectorAll(".views [role=tab]")], i=tabs.indexOf(b);
+    const j=e.key==="ArrowRight"?(i+1)%tabs.length:e.key==="ArrowLeft"?(i-1+tabs.length)%tabs.length:e.key==="Home"?0:e.key==="End"?tabs.length-1:-1;
+    if(j<0) return; e.preventDefault(); setView(tabs[j].dataset.view); tabs[j].focus(); }; });
+window.addEventListener("hashchange",()=>setView(location.hash==="#causes"?"causes":"advisor"));
 ["czMt","czPlace","czYear","czDim"].forEach(id=>$(id).addEventListener("change",()=>{ if(id==="czDim") CZ.sel=null; czRender(); }));
 document.querySelectorAll("[data-cv]").forEach(b=>b.onclick=()=>{ CZ.view=b.dataset.cv; document.querySelectorAll("[data-cv]").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); czRender(); });
 document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{ CZ.scale=b.dataset.sc; czRender(); });

@@ -418,11 +418,11 @@ for(const p of D.places){ if(p==="Above Ground") continue; $("place").add(new Op
 for(const m of D.mine_types) $("mt").add(new Option(m.replace(/ \(DGMS.*\)/,""),m));
 const EXAMPLES = [
   ["Drilling holes on a bench near an old blasted area in an opencast granite quarry","Opencast",""],
-  ["Support crew erecting chocks at the goaf edge of a depillaring panel in an underground coal mine","Below Ground","Coal"],
-  ["Dumper reversing near the edge of a dump yard at night with poor lighting","Opencast",""],
-  ["Electrician working on a 3.3 kV cable joint near the conveyor drive","",""],
-  ["Gas testing before blasting in a degree III gassy seam","Below Ground","Coal"],
-  ["Worker cleaning spillage under a running belt conveyor at the transfer point","",""]
+  ["Auxiliary fan has stopped and methane is accumulating at the face of an underground development heading","","Coal"],
+  ["Drilling into a split gallery of a depillaring panel where a misfired shot hole may remain","","Coal"],
+  ["Welding a pipeline underground near a sealed-off fire area where firedamp may be present","","Coal"],
+  ["Gas testing before blasting in a degree III gassy seam","","Coal"],
+  ["Dry coal dust has collected along the underground belt conveyor roadway and no stone dust has been spread","","Coal"]
 ];
 function setPressed(btn){ document.querySelectorAll("#ex .chip").forEach(c=>c.setAttribute("aria-pressed", c===btn?"true":"false")); }
 EXAMPLES.forEach(([t,p,m])=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("aria-pressed","false");

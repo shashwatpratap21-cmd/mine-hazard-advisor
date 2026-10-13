@@ -174,6 +174,12 @@ details.more summary:hover{color:var(--text)}
 .empty p{margin:0;max-width:62ch} .empty b{color:var(--text)}
 @media (prefers-reduced-motion:no-preference){.reveal{animation:rise .35s ease-out both}}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.notice{padding:var(--s3) var(--s4);border-radius:var(--r);border:1px solid rgba(242,181,68,.3);background:rgba(242,181,68,.06);color:var(--text-2);font-size:.98rem}
+.notice b{color:var(--text)}
+.partial{margin:0;color:var(--text-2);font-size:.95rem}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s1)}
+.pager .pg{color:var(--text-2);font-size:.95rem;text-align:center;flex:1}
+.empty>div{min-width:0}
 </style>
 
 <div class="wrap">
@@ -400,36 +406,49 @@ function sharedTerms(qv, i, n=3){
 }
 const KB_INDEX = new Map(KB.map((r,i)=>[r,i]));
 
-function idle(){
-  $("out").innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>Ready.</b> Describe the job you are going to do, or pick an example, then press <b>Find precedents</b>. The likely hazard, the key preventive measures and similar past accidents will appear here.</p></div>`;
+// ---------- filtering, ranking, paging ----------
+const PAGE=6;
+const PLACE_LABEL={"":"Any place of work","Below Ground":"Below Ground","Opencast":"Opencast (incl. above ground)"};
+function inFilters(r,place,mt){ return (!place||r.place===place||(place==="Opencast"&&r.place==="Above Ground"))&&(!mt||r.mine_type===mt); }
+function mtLabel(mt){ return mt?mt.replace(/ \(DGMS.*\)/,""):"Any mine type"; }
+// Operation A (filter) then Operation B (rank): same score as search(): text similarity + 0.10 if same hazard group
+function rankAll(q, place, mt, hazard){
+  const qv=vectorize(q, RET_IDX, D.ret.idf), eligible=[], out=[];
+  KB.forEach((r,i)=>{
+    if(!inFilters(r,place,mt)) return;
+    eligible.push(r);
+    let sim=0; const d=DOCS[i]; for(const [j,w] of qv){ const x=d.get(j); if(x) sim+=x*w; }
+    const same=hazard&&r.hazard===hazard;
+    if(sim>0||same) out.push({r,sim,same,score:sim+(same?0.1:0)});   // records with no shared terms and a different hazard are not relevant
+  });
+  out.sort((a,b)=>b.score-a.score);
+  return {qv, eligible:eligible.length, matches:out};
+}
+function browseAll(place, mt){
+  const list=KB.filter(r=>inFilters(r,place,mt)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  return {eligible:list.length, matches:list.map(r=>({r,sim:0,same:false,score:null}))};
 }
 
+function idle(){
+  $("out").innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>Ready.</b> Describe the job you are going to do, or pick an example, then press <b>Find precedents</b>. To browse records without a description, just choose a place of work or mine type and press the button.</p></div>`;
+}
+function showError(err){
+  console.error("[Mine Hazard Advisor] search failed:", err);
+  $("out").innerHTML=`<div class="empty card reveal" role="alert">${icon("Other causes")}<p><b>Something went wrong while searching.</b> ${esc(err&&err.message||String(err))}. Try again; if it keeps happening, reload the page.</p></div>`;
+}
 function submit(){
   const btn=$("go"); btn.disabled=true; btn.classList.add("busy"); $("goT").textContent="Analysing…";
-  setTimeout(()=>{ try{ run(); } finally { btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents"; } }, 140);
+  setTimeout(()=>{ try{ run(); } catch(err){ showError(err); } finally { btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents"; } }, 140);
 }
-
 function interp(p){ return p>=0.35?"Strong match":p>=0.2?"Moderate match":"Weak match"; }
 
-function run(){
-  const text=$("q").value.trim(), place=$("place").value, mt=$("mt").value;
-  const out=$("out");
-  if(text.length<2){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>Nothing to analyse yet.</b> Type the job you are going to do, for example: blasting, truck, roof, wire, water.</p></div>`; $("q").focus(); return; }
-  const q=expand(text), probs=classify(q), hz=probs[0];
-  const hits=search(q,{place,mineType:mt,hazard:hz.hazard});
-  const qv=vectorize(q, RET_IDX, D.ret.idf);
-  last={text,place,mt,probs,hits};
-  const pct=p=>(p*100).toFixed(0);
-  const alts=probs.slice(0,4).map((c,i)=>`<div class="bar ${i===0?"top":""}"><span>${esc(c.hazard)}</span><span class="p">${pct(c.p)}%</span><div class="track"><div class="fill" data-w="${(c.p*100).toFixed(1)}"></div></div></div>`).join("");
-  const acts=topMeasures(hits).map((m,i)=>`
-    <li class="act card"><span class="num" aria-hidden="true">${i+1}</span><span class="t">${esc(m.text)}</span>
-      <details class="ev"><summary>Based on ${m.ids.length} past accident${m.ids.length>1?"s":""}</summary><p>${m.ids.map(esc).join(", ")}${m.regs.length?" · "+m.regs.map(esc).join(", "):""}</p></details></li>`).join("");
-  const cases=hits.length?hits.map(({r,score})=>{
-    const ms=r.measures.split("|").map(x=>x.trim()).filter(Boolean);
-    const regs=[...new Set((r.regulations.match(/Reg \d+(?:\(\w+\))*|Sec(?:tion)? \d+(?:\(\w+\))*/g)||[]))].slice(0,4);
-    const terms=sharedTerms(qv, KB_INDEX.get(r));
-    const why=[terms.length?"shared terms: "+terms.join(", "):"", r.hazard===hz.hazard?"same hazard group (+0.10)":""].filter(Boolean).join(" · ");
-    return `
+function caseHTML({r,score,sim,same}, qv, hzName){
+  const ms=r.measures.split("|").map(x=>x.trim()).filter(Boolean);
+  const regs=[...new Set((r.regulations.match(/Reg \d+(?:\(\w+\))*|Sec(?:tion)? \d+(?:\(\w+\))*/g)||[]))].slice(0,4);
+  let why="Listed by date (no description entered)";
+  if(score!==null){ const terms=qv?sharedTerms(qv, KB_INDEX.get(r)):[];
+    why=[terms.length?"shared terms: "+terms.join(", "):"no shared terms", same?"same hazard group as predicted (+0.10)":""].filter(Boolean).join(" · ")+` · score ${score.toFixed(2)}`; }
+  return `
     <article class="case card reveal">
       <div class="case-h"><span class="rid">${esc(r.id)}</span><h3 class="mine">${esc(titleCase(r.mine_name))}</h3><span class="yr">${esc(String(r.year))}</span>
         <span class="killed">${r.persons_killed} killed</span></div>
@@ -441,9 +460,9 @@ function run(){
         <div class="full">
           <dl class="kv">
             <dt>Date</dt><dd>${esc(r.date)}</dd>
-            <dt>Location</dt><dd>${esc(r.state)} · ${esc(r.mineral)} · ${esc(r.place)}</dd>
+            <dt>Location</dt><dd>${esc(r.state)} · ${esc(r.mineral)} · ${esc(r.place)} · ${esc(mtLabel(r.mine_type))}</dd>
             <dt>DGMS cause</dt><dd>${esc(r.cause_group)} → ${esc(r.cause_subgroup)}</dd>
-            <dt>Why it matched</dt><dd>${esc(why||"—")} · similarity ${score.toFixed(2)}</dd>
+            <dt>Why it is listed</dt><dd>${esc(why)}</dd>
             <dt>Regulations</dt><dd>${esc(r.regulations)}</dd>
             <dt>Statutes</dt><dd>${esc(r.statutes_cited)}</dd>
           </dl>
@@ -451,40 +470,90 @@ function run(){
           <div class="findings"><h4>All DGMS findings: the accident could have been averted…</h4><ul class="measures">${measuresHTML(r.measures)}</ul></div>
         </div>
       </details>
-    </article>`}).join(""):`<div class="empty card">${icon("Other causes")}<p><b>No records match those filters.</b> Set Place of work or Mine type to Any and try again.</p></div>`;
-  out.innerHTML=`
+    </article>`;
+}
+
+let view=null;   // {matches, eligible, page, qv, hzName, place, mt, relaxed, browse}
+function renderPage(scroll){
+  const v=view, n=v.matches.length, start=v.page*PAGE, end=Math.min(start+PAGE,n);
+  const box=$("cases"), nav=$("pager"), cnt=$("count");
+  box.innerHTML=v.matches.slice(start,end).map(m=>caseHTML(m,v.qv,v.hzName)).join("");
+  cnt.textContent=`Showing ${start+1}–${end} of ${n} ${v.browse?"records":"matching records"}${v.browse?"":` (from ${v.eligible} ${v.relaxed||(!v.place&&!v.mt)?"records in the full dataset":"records in these filters"})`}`;
+  const atEnd=end>=n;
+  nav.innerHTML=`<button type="button" class="btn2" id="prev" ${start===0?"disabled":""}>Previous 6</button>
+    <span class="pg">${atEnd?(n>PAGE?"You have reached the end of the matching records.":""):""}</span>
+    <button type="button" class="btn2" id="next" ${atEnd?"disabled":""}>Next 6 records</button>`;
+  nav.hidden = n<=PAGE;
+  $("prev").onclick=()=>{ v.page--; renderPage(true); };
+  $("next").onclick=()=>{ v.page++; renderPage(true); };
+  if(scroll) $("acc-h").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+
+function noMatchHTML(place, mt, browse, eligible){
+  const f=`<b>${esc(PLACE_LABEL[place]||place)}</b> · <b>${esc(mtLabel(mt))}</b>`;
+  return `<div class="empty card reveal">${icon("Other causes")}<div><p><b>No ${browse?"":"relevant "}records found for these filters.</b> Filters applied: ${f}. ${eligible===0?"The DGMS dataset has no accidents for this combination.":`None of the ${eligible} accidents in these filters share terms with your description or belong to the predicted hazard group.`}</p>
+    ${place||mt?`<div class="btns" style="margin-top:12px"><button type="button" class="btn2" id="broaden">Search all places and mine types</button></div>`:""}</div></div>`;
+}
+
+function run(opts={}){
+  const text=$("q").value.trim(), place=opts.relaxed?"":$("place").value, mt=opts.relaxed?"":$("mt").value;
+  const fromPlace=$("place").value, fromMt=$("mt").value;
+  const out=$("out");
+  const browse=text.length<2;
+  if(browse && !place && !mt){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>Nothing to analyse yet.</b> Type the job you are going to do (for example: blasting, truck, roof, wire, water), or choose a place of work or mine type to browse records.</p></div>`; $("q").focus(); return; }
+
+  let probs=null, hz=null, res;
+  if(browse){ res=browseAll(place,mt); }
+  else { const q=expand(text); probs=classify(q); hz=probs[0]; res=rankAll(q,place,mt,hz.hazard); }
+  const top=res.matches.slice(0,PAGE);
+  view={matches:res.matches, eligible:res.eligible, page:0, qv:res.qv||null, hzName:hz&&hz.hazard, place, mt, relaxed:!!opts.relaxed, browse};
+  last={text,place,mt,probs,hits:top};
+
+  const pct=p=>(p*100).toFixed(0);
+  const relaxedNote=opts.relaxed?`<div class="notice reveal"><b>Broadened search.</b> Your filters (${esc(PLACE_LABEL[fromPlace]||fromPlace)} · ${esc(mtLabel(fromMt))}) returned no relevant records, so these results come from all places of work and mine types.</div>`:"";
+  const hazardHTML = browse ? `<div class="notice reveal"><b>Browsing ${res.eligible} record${res.eligible===1?"":"s"}</b> for ${esc(PLACE_LABEL[place]||place)} · ${esc(mtLabel(mt))}, newest first. Add a situation description to get the likely hazard, preventive measures and relevance ranking.</div>` : `
     <div class="hazard card reveal" role="group" aria-label="Hazard assessment">
       <div class="hz-main">
         <span class="label">Most likely hazard</span>
         <div class="hz-title"><span class="hz-icon">${icon(hz.hazard)}</span><h2 class="hz-name${hz.hazard.length>16?" long":""}">${esc(hz.hazard)}</h2></div>
         <div class="score"><span class="v">${pct(hz.p)}%</span><span class="k">classifier confidence</span><span class="badge ${confClass(hz.p)}"><i aria-hidden="true"></i>${interp(hz.p)}</span></div>
         <div class="gauge" role="img" aria-label="Classifier confidence ${pct(hz.p)} percent"><b data-w="${(hz.p*100).toFixed(1)}"></b></div>
-        <p class="interp">How sure the model is that your description belongs to this DGMS hazard group. It is not the probability of an accident. Strong ≥ 35%, moderate 20–34%, weak below 20%.</p>
+        <p class="interp">${hz.p<0.2?"<b>Low confidence:</b> the description does not point clearly to one hazard group, so check the alternatives on the right. ":""}How sure the model is that your description belongs to this DGMS hazard group. It is not the probability of an accident. Strong ≥ 35%, moderate 20–34%, weak below 20%.</p>
       </div>
       <div class="alts">
         <span class="label">Hazard ranking</span>
-        ${alts}
+        ${probs.slice(0,4).map((c,i)=>`<div class="bar ${i===0?"top":""}"><span>${esc(c.hazard)}</span><span class="p">${pct(c.p)}%</span><div class="track"><div class="fill" data-w="${(c.p*100).toFixed(1)}"></div></div></div>`).join("")}
       </div>
-    </div>
+    </div>`;
+  const acts = (!browse && top.length) ? topMeasures(top).map((m,i)=>`
+    <li class="act card"><span class="num" aria-hidden="true">${i+1}</span><span class="t">${esc(m.text)}</span>
+      <details class="ev"><summary>Based on ${m.ids.length} past accident${m.ids.length>1?"s":""}</summary><p>${m.ids.map(esc).join(", ")}${m.regs.length?" · "+m.regs.map(esc).join(", "):""}</p></details></li>`).join("") : "";
+  const measuresBlock = acts ? `
     <div class="block reveal">
-      <div class="sec-h"><h2>Preventive measures</h2><span class="sub">From the ${hits.length} closest accidents</span></div>
+      <div class="sec-h"><h2>Preventive measures</h2><span class="sub">From the ${top.length} closest accident${top.length===1?"":"s"}</span></div>
       <ol class="acts">${acts}</ol>
     </div>
     <div class="advice card reveal" id="adv" hidden>
       <div class="sec-h"><h2>More recommendations</h2></div>
-      <p class="why">Claude suggests measures not already listed above, using the DGMS findings of the ${hits.length} accidents below and the job you described.</p>
+      <p class="why">Claude suggests measures not already listed above, using the DGMS findings of the ${top.length} closest accidents and the job you described.</p>
       <div class="advice-body" id="advBody"></div>
       <div class="btns"><button type="button" class="btn2" id="advGo">Get more recommendations</button><button type="button" class="btn2" id="advStop" hidden>Stop</button></div>
       <p class="note" id="advNote"></p>
-    </div>
+    </div>` : "";
+  const accBlock = res.matches.length ? `
     <div class="block">
-      <div class="sec-h reveal"><h2>Closest past accidents</h2><span class="sub">${hits.length} of ${poolSize(place,mt)} DGMS records${place||mt?" (filtered)":""}</span></div>
-      <div class="cases">${cases}</div>
-    </div>`;
+      <div class="sec-h reveal" id="acc-h"><h2>${browse?"Accident records":"Closest past accidents"}</h2><span class="sub" id="count"></span></div>
+      ${!browse && res.matches.length<PAGE?`<p class="partial">Only ${res.matches.length} record${res.matches.length===1?"":"s"} in these filters relate to your description.</p>`:""}
+      <div class="cases" id="cases"></div>
+      <div class="pager" id="pager"></div>
+    </div>` : noMatchHTML(place,mt,browse,res.eligible);
+
+  out.innerHTML = relaxedNote + hazardHTML + measuresBlock + accBlock;
+  if(res.matches.length) renderPage(false);
+  const b=$("broaden"); if(b) b.onclick=()=>{ run({relaxed:true}); };
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ out.querySelectorAll("[data-w]").forEach(el=>{ el.style.width=el.dataset.w+"%"; }); }));
   wireAdvice();
 }
-
 let sample=null;
 function wireAdvice(){
   const box=$("adv"); if(!box) return;

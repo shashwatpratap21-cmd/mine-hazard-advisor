@@ -4,7 +4,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.metrics import accuracy_score, f1_score
-df = pd.read_csv("accidents.csv")
+df = pd.read_csv("data/accidents.csv")
 def tidy(s):
     s = "" if pd.isna(s) else str(s)
     s = s.replace("“",'"').replace("”",'"').replace("’","'")
@@ -40,7 +40,7 @@ recs=recs.fillna("").astype(object)
 out=dict(metrics=metrics,stop=sorted(ENGLISH_STOP_WORDS),clf=clf_json,ret=ret_json,kb=recs.values.tolist(),kbcols=cols,
   places=sorted(kb.place.dropna().unique().tolist()),mine_types=sorted(kb.mine_type.dropna().unique().tolist()))
 s=json.dumps(out,separators=(",",":"),ensure_ascii=False)
-open("model.json","w").write(s); print("MB",len(s)/1e6, len(inv), len(rinv))
+open("model/model.json","w").write(s); print("MB",len(s)/1e6, len(inv), len(rinv))
 # reference predictions for JS check
 qs=["Drilling holes on a bench near an old blasted area in an opencast granite quarry","roof fall while installing supports at the face in underground coal mine"]
 for q in qs:

@@ -179,6 +179,30 @@ details.more summary:hover{color:var(--text)}
 .pager{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s1)}
 .pager .pg{color:var(--text-2);font-size:.95rem;text-align:center;flex:1}
 .empty>div{min-width:0}
+.notice.warn{border-color:rgba(242,102,95,.4);background:var(--red-a)}
+.notice code{font-family:var(--mono);font-size:.9em}
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.prov{font:600 .74rem/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:5px 8px;border-radius:6px;border:1px solid}
+.prov.hist{color:#BFD3DE;border-color:rgba(111,135,148,.55);background:rgba(111,135,148,.12)}
+.prov.syn{color:#D9C6F2;border-color:rgba(190,160,235,.45);background:rgba(190,160,235,.10)}
+.prov.pot{color:var(--amber-hi);border-color:rgba(242,181,68,.45);background:var(--amber-a)}
+.prov.cat{color:var(--text-2);border-color:var(--line-2);background:transparent;text-transform:none;letter-spacing:0;font-family:var(--body);font-weight:500}
+.xpanel{padding:var(--s5);display:grid;gap:var(--s3);border-color:rgba(190,160,235,.22)}
+@media (max-width:720px){.xpanel{padding:22px}}
+.xp-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.xp-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:36px}
+@media (max-width:720px){.xp-grid{grid-template-columns:minmax(0,1fr);gap:22px}}
+.xp-main{display:grid;gap:var(--s3);align-content:start;min-width:0}
+.xp-cat{font:700 clamp(1.45rem,2.4vw,1.9rem)/1.1 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0;color:#fff;overflow-wrap:break-word}
+.xkv{grid-template-columns:170px minmax(0,1fr)}
+@media (max-width:560px){.xkv{grid-template-columns:minmax(0,1fr)}}
+.xkv .pill{display:inline-block;font:500 .82rem/1 var(--mono);color:var(--text-2);border:1px solid var(--line-2);border-radius:6px;padding:4px 7px;margin:0 4px 4px 0}
+.subj{margin-top:var(--s2);padding-top:var(--s3);border-top:1px solid var(--line);display:grid;gap:8px}
+.subj ul{margin:0;padding-left:18px;color:var(--text);display:grid;gap:4px}
+.syncard{padding:var(--s3) var(--s4);border-radius:var(--r);border:1px dashed rgba(190,160,235,.35);background:rgba(190,160,235,.04);display:grid;gap:10px;min-width:0}
+.syn-t{margin:0;color:var(--text);font-size:1rem}
+.linkbtn{justify-self:start;background:none;border:0;padding:0;color:var(--text-2);font:500 .92rem var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.linkbtn:hover{color:var(--text)}
 </style>
 
 <div class="wrap">
@@ -220,6 +244,7 @@ details.more summary:hover{color:var(--text)}
 </div>
 
 <script id="data" type="application/json">__DATA__</script>
+<script id="xdata" type="application/json">__XDATA__</script>
 <script>
 const D = JSON.parse(document.getElementById("data").textContent);
 const STOP = new Set(D.stop);
@@ -320,6 +345,7 @@ function shortSit(s){
 // Group DGMS "Had..." findings from the matched accidents into plain-language points
 const THEMES = [
   ["phone",    /mobile (?:phone|telephone)|cell ?phone/i, "Do not use a mobile phone while driving or near moving vehicles and machines, and keep phones out of areas where flammable gas may be present."],
+  ["lightning", /lightning|thunder|electric storm|approach of (?:a|an) (?:electric )?storm/i, "When a storm approaches, coil up and cover all naked or exposed detonator lead wires so they cannot pick up a charge."],
   ["misfire",  /misfire|socket/i, "Before drilling, wash down and examine the rock for misfired holes and sockets. Never drill into or near an old hole."],
   ["shelter",  /shelter|danger zone|before (?:the )?firing|withdrawn .*blast|blast.*withdrawn|warning signal/i, "Before blasting, clear everyone out of the danger zone and make sure they are in proper shelter. Give the warning signal."],
   ["blaster",  /\bblasters?\b|shot ?firer|\bcharg(?:ing|ed)\b.*(?:hole|explosive)|\bexplosives?\b|detonat|stemm/i, "Only a trained, authorised blaster should handle, charge and fire explosives, following the blasting rules."],
@@ -412,27 +438,116 @@ const PAGE=6;
 const PLACE_LABEL={"":"Any place of work","Below Ground":"Below Ground","Opencast":"Opencast (incl. above ground)"};
 function inFilters(r,place,mt){ return (!place||r.place===place||(place==="Opencast"&&r.place==="Above Ground"))&&(!mt||r.mine_type===mt); }
 function mtLabel(mt){ return mt?mt.replace(/ \(DGMS.*\)/,""):"Any mine type"; }
+function filtersText(place,mt){ return `${PLACE_LABEL[place]||place} · ${mtLabel(mt)}`; }
+
 // Operation A (filter) then Operation B (rank): same score as search(): text similarity + 0.10 if same hazard group
 function rankAll(q, place, mt, hazard){
-  const qv=vectorize(q, RET_IDX, D.ret.idf), eligible=[], out=[];
+  const qv=vectorize(q, RET_IDX, D.ret.idf), out=[]; let eligible=0;
   KB.forEach((r,i)=>{
     if(!inFilters(r,place,mt)) return;
-    eligible.push(r);
+    eligible++;
     let sim=0; const d=DOCS[i]; for(const [j,w] of qv){ const x=d.get(j); if(x) sim+=x*w; }
     const same=hazard&&r.hazard===hazard;
-    if(sim>0||same) out.push({r,sim,same,score:sim+(same?0.1:0)});   // records with no shared terms and a different hazard are not relevant
+    if(sim>0||same) out.push({r,sim,same,score:sim+(same?0.1:0)});
   });
   out.sort((a,b)=>b.score-a.score);
-  return {qv, eligible:eligible.length, matches:out};
+  return {qv, eligible, matches:out};
 }
 function browseAll(place, mt){
   const list=KB.filter(r=>inFilters(r,place,mt)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   return {eligible:list.length, matches:list.map(r=>({r,sim:0,same:false,score:null}))};
 }
 
-function idle(){
-  $("out").innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>Ready.</b> Describe the job you are going to do, or pick an example, then press <b>Find precedents</b>. To browse records without a description, just choose a place of work or mine type and press the button.</p></div>`;
+// ---------- explosion intelligence (Dataset A: historical DGMS, Dataset B: synthetic scenarios) ----------
+let X=null, XERR="";
+try{
+  const el=document.getElementById("xdata");
+  if(!el) throw new Error("the explosion data block is missing from the page");
+  X=JSON.parse(el.textContent);
+  for(const k of ["taxonomy","clf","syn","syn_index","lexicon","hist_xcat"]) if(!X[k]) throw new Error(`field “${k}” is missing`);
+  if(!Array.isArray(X.syn)||X.syn.length===0) throw new Error("no synthetic scenarios were loaded");
+}catch(e){ X=null; XERR=e.message; console.error("[Mine Hazard Advisor] explosion database not loaded:", e); }
+let XCLF_IDX, SYN_IDX, SYN_DOCS, LEX;
+if(X){
+  XCLF_IDX=index(X.clf.terms); SYN_IDX=index(X.syn_index.terms);
+  SYN_DOCS=X.syn_index.docs.map(([ix,vals])=>{ const m=new Map(); ix.forEach((j,i)=>m.set(j,vals[i])); return m; });
+  const rx=o=>Object.fromEntries(Object.entries(o).map(([k,p])=>[k,new RegExp(p,"i")]));
+  LEX={strong:rx(X.lexicon.strong), weak:rx(X.lexicon.weak), atmo:new Set(X.lexicon.atmosphere), event:new RegExp(X.lexicon.event,"i"), groups:new Set(X.lexicon.explosive_groups)};
 }
+// same rule as build_explosion.py evidence()
+function xEvidence(text, dgmsHazard){
+  const strong=Object.keys(LEX.strong).filter(k=>LEX.strong[k].test(text));
+  const weak=Object.keys(LEX.weak).filter(k=>LEX.weak[k].test(text));
+  const other=strong.filter(k=>k!=="explosives / blasting");
+  const event=LEX.event.test(text);
+  const blastingOk=strong.includes("explosives / blasting")&&(event||weak.includes("ignition source")||LEX.groups.has(dgmsHazard));
+  const atmo=weak.some(k=>LEX.atmo.has(k))&&weak.some(k=>!LEX.atmo.has(k));
+  return {relevant:other.length>0||blastingOk||atmo, strong, weak, event};
+}
+function xClassify(text){
+  const v=vectorize(text, XCLF_IDX, X.clf.idf);
+  const z=X.clf.coef.map((row,k)=>{ let s=X.clf.intercept[k]; for(const [j,w] of v) s+=row[j]*w; return s; });
+  const mx=Math.max(...z), e=z.map(x=>Math.exp(x-mx)), sum=e.reduce((a,b)=>a+b,0);
+  const probs=X.clf.classes.map((c,k)=>({cat:c,p:e[k]/sum,k})).sort((a,b)=>b.p-a.p);
+  const top=probs[0], contrib=[];
+  for(const [j,w] of v){ const c=X.clf.coef[top.k][j]*w; if(c>0) contrib.push([X.clf.terms[j],c]); }
+  contrib.sort((a,b)=>b[1]-a[1]);
+  const terms=[]; for(const [t] of contrib){ if(terms.some(p=>p.includes(t)||t.includes(p))) continue; terms.push(t); if(terms.length===5) break; }
+  return {probs, top, terms, ambiguous: top.p<0.35 || (top.p-probs[1].p)<0.10};
+}
+function mineContext(text, mt){
+  if(mt) return {label:mtLabel(mt), from:"filter", metal:mt!=="Coal"&&mt!=="Oil & gas", coal:mt==="Coal"};
+  const coal=/\bcoal\b/i.test(text), metal=/\b(?:metal|ore|iron|copper|zinc|lead|manganese|bauxite|gold|uranium|limestone|granite|stone)\b/i.test(text);
+  return {label: coal&&!metal?"Coal (from description)":metal&&!coal?"Metal / non-coal (from description)":coal&&metal?"Coal and metal both mentioned":"Not stated", from:"text", coal, metal:metal&&!coal};
+}
+// Mechanisms that are genuinely related (shared ignition / flammable-atmosphere or blasting mechanism).
+// A historical record is listed only if it has the SAME category, a RELATED one with some shared wording, or strong shared wording.
+const HYDRO="Outside taxonomy: Hydrocarbon/vapour explosion in vessel (hot work)";
+const RELATED={
+  "Methane / Firedamp Explosion":[HYDRO],
+  "Coal-Dust Explosion":["Methane / Firedamp Explosion"],
+  "Combined Methane and Coal-Dust Explosion":["Methane / Firedamp Explosion"],
+  "Blasting and Explosives-Related Explosion":[],
+  "Electrical or Mechanical Ignition of Explosive Atmosphere":["Methane / Firedamp Explosion",HYDRO],
+  "Spontaneous Heating, Fire and Explosion Escalation":["Methane / Firedamp Explosion",HYDRO],
+  "Metal Mine: Gas, Dust and Other Explosion Mechanisms":["Blasting and Explosives-Related Explosion","Methane / Firedamp Explosion",HYDRO]};
+// Historical explosion records: the 31 DGMS core explosion events, filtered, ranked by text similarity + 0.15 same / +0.05 related category
+function rankHistX(q, place, mt, cat){
+  const qv=vectorize(q, RET_IDX, D.ret.idf), out=[]; let eligible=0;
+  KB.forEach((r,i)=>{
+    const xc=X.hist_xcat[r.id]; if(!xc||!inFilters(r,place,mt)) return;
+    eligible++;
+    let sim=0; const d=DOCS[i]; for(const [j,w] of qv){ const x=d.get(j); if(x) sim+=x*w; }
+    const same=xc===cat, related=!same&&(RELATED[cat]||[]).includes(xc);
+    if(same||(related&&sim>=0.05)||sim>=0.15) out.push({r,sim,same,related,xc,score:sim+(same?0.15:related?0.05:0)});
+  });
+  out.sort((a,b)=>b.score-a.score);
+  return {qv, eligible, matches:out, nSame:out.filter(m=>m.same).length};
+}
+// Synthetic scenarios: separate index, ranked by text similarity + 0.10 for the same category, mine-type context only
+function synMineOk(ctx, mt){
+  if(!mt) return true;
+  if(mt==="Coal") return /coal/i.test(ctx);
+  if(mt==="Oil & gas") return false;
+  return /metal/i.test(ctx);   // Metal ore and Non-metallic ("metalliferous") use the Metal / Coal-or-Metal scenarios
+}
+function rankSyn(text, mt, cat){
+  const qv=vectorize(text, SYN_IDX, X.syn_index.idf), out=[]; let eligible=0;
+  X.syn.forEach((s,i)=>{
+    if(!synMineOk(s[3],mt)) return;
+    eligible++;
+    let sim=0; const d=SYN_DOCS[i]; for(const [j,w] of qv){ const x=d.get(j); if(x) sim+=x*w; }
+    const same=s[2]===cat;
+    if(sim>=0.08||(same&&sim>0)) out.push({s,sim,same,score:sim+(same?0.1:0)});
+  });
+  out.sort((a,b)=>b.score-a.score);
+  return {eligible, matches:out};
+}
+
+function idle(){
+  $("out").innerHTML=(X?"":xErrHTML())+`<div class="empty card reveal">${icon("Other causes")}<p><b>Ready.</b> Describe the job you are going to do, or pick an example, then press <b>Find precedents</b>. To browse records without a description, just choose a place of work or mine type and press the button.</p></div>`;
+}
+function xErrHTML(){ return `<div class="notice warn reveal" role="alert"><b>Explosion database not loaded.</b> ${esc(XERR)}. General hazard analysis still works; explosion-specific analysis is switched off until the page is rebuilt with <code>build_site.py</code>.</div>`; }
 function showError(err){
   console.error("[Mine Hazard Advisor] search failed:", err);
   $("out").innerHTML=`<div class="empty card reveal" role="alert">${icon("Other causes")}<p><b>Something went wrong while searching.</b> ${esc(err&&err.message||String(err))}. Try again; if it keeps happening, reload the page.</p></div>`;
@@ -443,16 +558,22 @@ function submit(){
 }
 function interp(p){ return p>=0.35?"Strong match":p>=0.2?"Moderate match":"Weak match"; }
 
-function caseHTML({r,score,sim,same}, qv, hzName){
+const TAG_HIST=`<span class="prov hist" title="Extracted from the DGMS SANKET reports; each record is traceable to the PDF page shown. Not individually re-verified by an inspector.">Historical — DGMS source</span>`;
+const TAG_SYN=`<span class="prov syn">Synthetic — training scenario</span>`;
+const TAG_POT=`<span class="prov pot">Potential hazard — not a confirmed explosion</span>`;
+
+function caseHTML({r,score,sim,same,related,xc}, qv, xmode){
   const ms=r.measures.split("|").map(x=>x.trim()).filter(Boolean);
   const regs=[...new Set((r.regulations.match(/Reg \d+(?:\(\w+\))*|Sec(?:tion)? \d+(?:\(\w+\))*/g)||[]))].slice(0,4);
   let why="Listed by date (no description entered)";
   if(score!==null){ const terms=qv?sharedTerms(qv, KB_INDEX.get(r)):[];
-    why=[terms.length?"shared terms: "+terms.join(", "):"no shared terms", same?"same hazard group as predicted (+0.10)":""].filter(Boolean).join(" · ")+` · score ${score.toFixed(2)}`; }
+    why=[terms.length?"shared terms: "+terms.join(", "):"no shared terms", same?(xmode?"same explosion category as predicted (+0.15)":"same hazard group as predicted (+0.10)"):related?"related explosion mechanism (+0.05)":""].filter(Boolean).join(" · ")+` · score ${score.toFixed(2)}`; }
+  const xcat=X&&X.hist_xcat[r.id];
   return `
     <article class="case card reveal">
       <div class="case-h"><span class="rid">${esc(r.id)}</span><h3 class="mine">${esc(titleCase(r.mine_name))}</h3><span class="yr">${esc(String(r.year))}</span>
         <span class="killed">${r.persons_killed} killed</span></div>
+      <div class="tags">${TAG_HIST}${xcat?`<span class="prov cat">${esc(xcat)}</span>`:""}</div>
       <p class="sit">${esc(shortSit(r.situation))}</p>
       <div class="findings"><h4>Key finding${ms.length>1?"s":""}</h4>
         <ul class="lessons">${ms.slice(0,2).map(m=>`<li>${esc(shortMeasure(m))}</li>`).join("")}</ul></div>
@@ -463,6 +584,7 @@ function caseHTML({r,score,sim,same}, qv, hzName){
             <dt>Date</dt><dd>${esc(r.date)}</dd>
             <dt>Location</dt><dd>${esc(r.state)} · ${esc(r.mineral)} · ${esc(r.place)} · ${esc(mtLabel(r.mine_type))}</dd>
             <dt>DGMS cause</dt><dd>${esc(r.cause_group)} → ${esc(r.cause_subgroup)}</dd>
+            ${xcat?`<dt>Explosion category</dt><dd>${esc(xcat)} (mapped from the project's DGMS explosion coding)</dd>`:""}
             <dt>Why it is listed</dt><dd>${esc(why)}</dd>
             <dt>Regulations</dt><dd>${esc(r.regulations)}</dd>
             <dt>Statutes</dt><dd>${esc(r.statutes_cited)}</dd>
@@ -473,107 +595,182 @@ function caseHTML({r,score,sim,same}, qv, hzName){
       </details>
     </article>`;
 }
-
-let view=null;   // {matches, eligible, page, qv, hzName, place, mt, relaxed, browse}
-function renderPage(scroll){
-  const v=view, n=v.matches.length, start=v.page*PAGE, end=Math.min(start+PAGE,n);
-  const box=$("cases"), nav=$("pager"), cnt=$("count");
-  box.innerHTML=v.matches.slice(start,end).map(m=>caseHTML(m,v.qv,v.hzName)).join("");
-  cnt.textContent=`Showing ${start+1}–${end} of ${n} ${v.browse?"records":"matching records"}${v.browse?"":` (from ${v.eligible} ${v.relaxed||(!v.place&&!v.mt)?"records in the full dataset":"records in these filters"})`}`;
-  const atEnd=end>=n;
-  nav.innerHTML=`<button type="button" class="btn2" id="prev" ${start===0?"disabled":""}>Previous 6</button>
-    <span class="pg">${atEnd?(n>PAGE?"You have reached the end of the matching records.":""):""}</span>
-    <button type="button" class="btn2" id="next" ${atEnd?"disabled":""}>Next 6 records</button>`;
-  nav.hidden = n<=PAGE;
-  $("prev").onclick=()=>{ v.page--; renderPage(true); };
-  $("next").onclick=()=>{ v.page++; renderPage(true); };
-  if(scroll) $("acc-h").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+function synHTML({s,sim,same,score}){
+  const [id,text,cat,mctx,pctx,isEvent]=s;
+  return `<article class="syncard reveal">
+      <div class="tags"><span class="rid">${esc(id)}</span>${TAG_SYN}${isEvent?"":TAG_POT}</div>
+      <p class="syn-t">${esc(text)}</p>
+      <div class="src">Suggested category: <b>${esc(cat)}</b> · ${esc(mctx)} · ${esc(pctx)}${same?" · same category as predicted":""} · score ${score.toFixed(2)}</div>
+    </article>`;
 }
 
-let unclearFlag=false;
-function noMatchHTML(place, mt, browse, eligible){
+// ---------- pagers (historical and synthetic are paged separately) ----------
+const PAGERS={};
+function makePager(id, items, render, noun, extra){ PAGERS[id]={items,render,noun,extra,page:0}; renderPager(id,false); }
+function renderPager(id, scroll){
+  const P=PAGERS[id], n=P.items.length, start=P.page*PAGE, end=Math.min(start+PAGE,n);
+  $(id+"-list").innerHTML=P.items.slice(start,end).map(P.render).join("");
+  $(id+"-count").textContent=`Showing ${start+1}–${end} of ${n} ${P.noun}${P.extra?` ${P.extra}`:""}`;
+  const nav=$(id+"-pager"), atEnd=end>=n;
+  nav.hidden=n<=PAGE;
+  nav.innerHTML=`<button type="button" class="btn2" data-dir="-1" ${start===0?"disabled":""}>Previous 6</button>
+    <span class="pg">${atEnd&&n>PAGE?"You have reached the end of the matching records.":""}</span>
+    <button type="button" class="btn2" data-dir="1" ${atEnd?"disabled":""}>Next 6 records</button>`;
+  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>{ P.page+=Number(b.dataset.dir); renderPager(id,true); });
+  if(scroll) $(id+"-h").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+function listBlock(id, title, sub){ return `
+    <div class="block">
+      <div class="sec-h reveal" id="${id}-h"><h2>${title}</h2><span class="sub" id="${id}-count"></span></div>
+      ${sub||""}
+      <div class="cases" id="${id}-list"></div>
+      <div class="pager" id="${id}-pager"></div>
+    </div>`; }
+
+function noMatchHTML(place, mt, browse, eligible, unclear){
   const f=`<b>${esc(PLACE_LABEL[place]||place)}</b> · <b>${esc(mtLabel(mt))}</b>`;
-  return `<div class="empty card reveal">${icon("Other causes")}<div><p><b>No ${browse?"":"relevant "}records found for these filters.</b> Filters applied: ${f}. ${eligible===0?"The DGMS dataset has no accidents for this combination.":`None of the ${eligible} accidents in these filters share terms with your description${unclearFlag?"":" or belong to the predicted hazard group"}.`}</p>
+  return `<div class="empty card reveal">${icon("Other causes")}<div><p><b>No ${browse?"":"relevant "}records found for these filters.</b> Filters applied: ${f}. ${eligible===0?"The DGMS dataset has no accidents for this combination.":`None of the ${eligible} accidents in these filters share terms with your description${unclear?"":" or belong to the predicted hazard group"}.`}</p>
     ${place||mt?`<div class="btns" style="margin-top:12px"><button type="button" class="btn2" id="broaden">Search all places and mine types</button></div>`:""}</div></div>`;
 }
 
-function run(opts={}){
-  const text=$("q").value.trim(), place=opts.relaxed?"":$("place").value, mt=opts.relaxed?"":$("mt").value;
-  const fromPlace=$("place").value, fromMt=$("mt").value;
-  const out=$("out");
-  const browse=text.length<2;
-  if(browse && !place && !mt){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>Nothing to analyse yet.</b> Type the job you are going to do (for example: blasting, truck, roof, wire, water), or choose a place of work or mine type to browse records.</p></div>`; $("q").focus(); return; }
-
-  let probs=null, hz=null, res;
-  if(browse){ res=browseAll(place,mt); }
-  let known=0, unclear=false;
-  if(!browse){ const q=expand(text); known=vectorize(q,CLF_IDX,D.clf.idf).size+vectorize(q,RET_IDX,D.ret.idf).size;
-    if(known===0){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>These words are not in the DGMS records.</b> The model could not recognise “${esc(text.slice(0,60))}”. Describe the activity, equipment or place, for example: drilling, truck, roof, conveyor, wire, water, phone.</p></div>`; last=null; return; }
-    probs=classify(q); hz=probs[0]; unclear=hz.p<0.2;
-    res=rankAll(q,place,mt,unclear?null:hz.hazard); }
-  unclearFlag=unclear;
-  const top=res.matches.slice(0,PAGE);
-  view={matches:res.matches, eligible:res.eligible, page:0, qv:res.qv||null, hzName:hz&&!unclear?hz.hazard:null, place, mt, relaxed:!!opts.relaxed, browse};
-  last={text,place,mt,probs,hits:top,unclear};
-
-  const pct=p=>(p*100).toFixed(0);
-  const relaxedNote=opts.relaxed?`<div class="notice reveal"><b>Broadened search.</b> Your filters (${esc(PLACE_LABEL[fromPlace]||fromPlace)} · ${esc(mtLabel(fromMt))}) returned no relevant records, so these results come from all places of work and mine types.</div>`:"";
-  const unclearHTML = (!browse && unclear) ? `
+function hazardPanel(hz, probs, unclear, pct){
+  if(unclear) return `
     <div class="hazard card reveal" role="group" aria-label="Hazard assessment">
       <div class="hz-main">
         <span class="label">Most likely hazard</span>
         <div class="hz-title"><span class="hz-icon">${icon("Other causes")}</span><h2 class="hz-name">Hazard unclear</h2></div>
         <div class="score"><span class="v">${pct(hz.p)}%</span><span class="k">highest classifier confidence</span><span class="badge lo"><i aria-hidden="true"></i>Weak match</span></div>
-        <p class="interp">Your description does not point clearly to one DGMS hazard group, so none is shown as the answer. The closest past accidents below are ranked by the words you used only. Add the activity, equipment and place (for example “using a mobile phone while walking on the haul road”) for a clearer result.</p>
+        <p class="interp">Your description does not point clearly to one DGMS hazard group, so none is shown as the answer. Add the activity, equipment and place for a clearer result.</p>
       </div>
-      <div class="alts">
-        <span class="label">Possible hazard groups</span>
+      <div class="alts"><span class="label">Possible hazard groups</span>
         ${probs.slice(0,4).map(c=>`<div class="bar"><span>${esc(c.hazard)}</span><span class="p">${pct(c.p)}%</span><div class="track"><div class="fill" data-w="${(c.p*100).toFixed(1)}"></div></div></div>`).join("")}
       </div>
-    </div>` : "";
-  const hazardHTML = unclearHTML ? unclearHTML : browse ? `<div class="notice reveal"><b>Browsing ${res.eligible} record${res.eligible===1?"":"s"}</b> for ${esc(PLACE_LABEL[place]||place)} · ${esc(mtLabel(mt))}, newest first. Add a situation description to get the likely hazard, preventive measures and relevance ranking.</div>` : `
+    </div>`;
+  return `
     <div class="hazard card reveal" role="group" aria-label="Hazard assessment">
       <div class="hz-main">
         <span class="label">Most likely hazard</span>
         <div class="hz-title"><span class="hz-icon">${icon(hz.hazard)}</span><h2 class="hz-name${hz.hazard.length>16?" long":""}">${esc(hz.hazard)}</h2></div>
         <div class="score"><span class="v">${pct(hz.p)}%</span><span class="k">classifier confidence</span><span class="badge ${confClass(hz.p)}"><i aria-hidden="true"></i>${interp(hz.p)}</span></div>
         <div class="gauge" role="img" aria-label="Classifier confidence ${pct(hz.p)} percent"><b data-w="${(hz.p*100).toFixed(1)}"></b></div>
-        <p class="interp">${hz.p<0.2?"<b>Low confidence:</b> the description does not point clearly to one hazard group, so check the alternatives on the right. ":""}How sure the model is that your description belongs to this DGMS hazard group. It is not the probability of an accident. Strong ≥ 35%, moderate 20–34%, weak below 20%.</p>
+        <p class="interp">How sure the model is that your description belongs to this DGMS hazard group. It is not the probability of an accident. Strong ≥ 35%, moderate 20–34%, weak below 20%.</p>
       </div>
-      <div class="alts">
-        <span class="label">Hazard ranking</span>
+      <div class="alts"><span class="label">Hazard ranking</span>
         ${probs.slice(0,4).map((c,i)=>`<div class="bar ${i===0?"top":""}"><span>${esc(c.hazard)}</span><span class="p">${pct(c.p)}%</span><div class="track"><div class="fill" data-w="${(c.p*100).toFixed(1)}"></div></div></div>`).join("")}
       </div>
     </div>`;
-  const acts = (!browse && top.length) ? topMeasures(top).map((m,i)=>`
+}
+
+function explosionPanel(xa, pct){
+  const {cls,ev,ctx,nHist,nSyn}=xa, t=cls.top;
+  const coalOnly=X.coal_only.includes(t.cat)&&ctx.metal;
+  const feats=[...ev.strong,...ev.weak];
+  return `
+    <div class="xpanel card reveal" role="group" aria-label="Explosion analysis">
+      <div class="xp-h"><span class="label">Explosion analysis</span>${ev.event?"":TAG_POT}</div>
+      <div class="xp-grid">
+        <div class="xp-main">
+          <h2 class="xp-cat">${cls.ambiguous?`Ambiguous: ${esc(t.cat)} or ${esc(cls.probs[1].cat)}`:esc(t.cat)}</h2>
+          <div class="score"><span class="v">${pct(t.p)}%</span><span class="k">explosion-category confidence</span><span class="badge ${cls.ambiguous?"lo":confClass(t.p)}"><i aria-hidden="true"></i>${cls.ambiguous?"Uncertain":interp(t.p)}</span></div>
+          <p class="interp">From a classifier trained on ${X.metrics.n_train} examples: ${X.syn.length} synthetic scenarios (labels not yet expert-validated) and ${X.metrics.n_train-X.syn.length} historical DGMS explosion narratives. It says which explosion mechanism your description resembles, not the chance of an explosion.${coalOnly?` <b>Note:</b> this category was defined for coal mines, but the mine context is metal / non-coal. Check the description.`:""}</p>
+          <dl class="kv xkv">
+            <dt>Explosion evidence</dt><dd>${feats.map(f=>`<span class="pill">${esc(f)}</span>`).join(" ")}</dd>
+            <dt>Words behind the category</dt><dd>${cls.terms.length?cls.terms.map(esc).join(", "):"none specific"}</dd>
+            <dt>Mine context</dt><dd>${esc(ctx.label)}</dd>
+            <dt>Records found</dt><dd>${nHist} historical explosion record${nHist===1?"":"s"} · ${nSyn} synthetic scenario${nSyn===1?"":"s"}</dd>
+          </dl>
+        </div>
+        <div class="alts"><span class="label">Explosion categories</span>
+          ${cls.probs.slice(0,4).map((c,i)=>`<div class="bar ${i===0&&!cls.ambiguous?"top":""}"><span>${esc(c.cat)}</span><span class="p">${pct(c.p)}%</span><div class="track"><div class="fill" data-w="${(c.p*100).toFixed(1)}"></div></div></div>`).join("")}
+          <div class="subj"><span class="label">Subject areas to review</span>
+            <ul>${(X.subject_areas[t.cat]||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
+            <p class="interp">General guidance for this mechanism, not drawn from DGMS findings.</p></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function measuresHTMLBlock(top, note){
+  const acts=top.length?topMeasures(top).map((m,i)=>`
     <li class="act card"><span class="num" aria-hidden="true">${i+1}</span><span class="t">${esc(m.text)}</span>
-      <details class="ev"><summary>Based on ${m.ids.length} past accident${m.ids.length>1?"s":""}</summary><p>${m.ids.map(esc).join(", ")}${m.regs.length?" · "+m.regs.map(esc).join(", "):""}</p></details></li>`).join("") : "";
-  const measuresBlock = acts ? `
+      <details class="ev"><summary>Based on ${m.ids.length} historical accident${m.ids.length>1?"s":""}</summary><p>${m.ids.map(esc).join(", ")}${m.regs.length?" · "+m.regs.map(esc).join(", "):""}</p></details></li>`).join(""):"";
+  return `
     <div class="block reveal">
-      <div class="sec-h"><h2>Preventive measures</h2><span class="sub">From the ${top.length} closest accident${top.length===1?"":"s"}</span></div>
-      <ol class="acts">${acts}</ol>
+      <div class="sec-h"><h2>Preventive measures</h2><span class="sub">${top.length?`From the ${top.length} closest historical accident${top.length===1?"":"s"}`:"No historical evidence"}</span></div>
+      ${note||""}
+      ${acts?`<ol class="acts">${acts}</ol>`:""}
     </div>
-    <div class="advice card reveal" id="adv" hidden>
+    ${top.length?`<div class="advice card reveal" id="adv" hidden>
       <div class="sec-h"><h2>More recommendations</h2></div>
-      <p class="why">Claude suggests measures not already listed above, using the DGMS findings of the ${top.length} closest accidents and the job you described.</p>
+      <p class="why">Claude suggests measures not already listed above, using the DGMS findings of the ${top.length} closest historical accidents and the job you described. These are AI suggestions, not DGMS findings.</p>
       <div class="advice-body" id="advBody"></div>
       <div class="btns"><button type="button" class="btn2" id="advGo">Get more recommendations</button><button type="button" class="btn2" id="advStop" hidden>Stop</button></div>
       <p class="note" id="advNote"></p>
-    </div>` : "";
-  const accBlock = res.matches.length ? `
-    <div class="block">
-      <div class="sec-h reveal" id="acc-h"><h2>${browse?"Accident records":"Closest past accidents"}</h2><span class="sub" id="count"></span></div>
-      ${!browse && res.matches.length<PAGE?`<p class="partial">Only ${res.matches.length} record${res.matches.length===1?"":"s"} in these filters relate to your description.</p>`:""}
-      <div class="cases" id="cases"></div>
-      <div class="pager" id="pager"></div>
-    </div>` : noMatchHTML(place,mt,browse,res.eligible);
+    </div>`:""}`;
+}
 
-  out.innerHTML = relaxedNote + hazardHTML + measuresBlock + accBlock;
-  if(res.matches.length) renderPage(false);
-  const b=$("broaden"); if(b) b.onclick=()=>{ run({relaxed:true}); };
+function run(opts={}){
+  const text=$("q").value.trim(), place=opts.relaxed?"":$("place").value, mt=opts.relaxed?"":$("mt").value;
+  const fromPlace=$("place").value, fromMt=$("mt").value;
+  const out=$("out"), pct=p=>(p*100).toFixed(0);
+  const browse=text.length<2;
+  if(browse && !place && !mt){ out.innerHTML=(X?"":xErrHTML())+`<div class="empty card reveal">${icon("Other causes")}<p><b>Nothing to analyse yet.</b> Type the job you are going to do (for example: blasting, truck, roof, wire, water), or choose a place of work or mine type to browse records.</p></div>`; $("q").focus(); return; }
+
+  let probs=null, hz=null, unclear=false, q="", xa=null;
+  if(!browse){
+    q=expand(text);
+    const known=vectorize(q,CLF_IDX,D.clf.idf).size+vectorize(q,RET_IDX,D.ret.idf).size+(X?vectorize(text,XCLF_IDX,X.clf.idf).size:0);
+    if(known===0){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>These words are not in the DGMS records.</b> The model could not recognise “${esc(text.slice(0,60))}”. Describe the activity, equipment or place, for example: drilling, truck, roof, conveyor, wire, water, phone.</p></div>`; last=null; return; }
+    probs=classify(q); hz=probs[0]; unclear=hz.p<0.2;
+    if(X && !opts.noExplosion){
+      const ev=xEvidence(text, hz.hazard);
+      if(ev.relevant){
+        const cls=xClassify(text), ctx=mineContext(text, mt);
+        const hist=rankHistX(q, place, mt, cls.top.cat), syn=rankSyn(text, mt, cls.top.cat);
+        xa={ev,cls,ctx,hist,syn,nHist:hist.matches.length,nSyn:syn.matches.length};
+      }
+    }
+  }
+
+  const relaxedNote=opts.relaxed?`<div class="notice reveal"><b>Broadened search.</b> Your filters (${esc(filtersText(fromPlace,fromMt))}) returned no relevant historical records, so these results come from all places of work and mine types.</div>`:"";
+  const allNote=opts.noExplosion?`<div class="notice reveal"><b>All DGMS accidents.</b> Explosion analysis is switched off for this search, so results include every relevant accident type, not only explosions.</div>`:"";
+
+  if(xa){
+    // ----- explosion mode -----
+    const top=xa.hist.matches.slice(0,PAGE);
+    last={text,place,mt,probs,hits:top,unclear,xcat:xa.cls.top.cat};
+    const few=top.length>0&&top.length<2;
+    const mNote=!top.length?`<div class="notice reveal"><b>No historical DGMS explosion record supports specific measures for this situation.</b> See the general subject areas in the explosion analysis above, and treat any synthetic scenario as an example, not evidence.</div>`
+                 :few?`<p class="partial">Only one historical explosion record matched, so these measures rest on a single accident.</p>`:"";
+    const histBlock = xa.hist.matches.length ? listBlock("hx","Historical explosion records", (xa.hist.nSame===0?`<p class="partial"><b>No historical DGMS record of the category “${esc(xa.cls.top.cat)}”.</b> The records below involve a related mechanism or share strong wording; they are context, not direct precedents.</p>`:"")+`<button type="button" class="linkbtn" id="allacc">Show all DGMS accidents, not only explosions</button>`) :
+      `<div class="block"><div class="sec-h reveal"><h2>Historical explosion records</h2><span class="sub">None found</span></div>
+        <div class="empty card reveal">${icon("Explosives")}<div><p><b>No suitable historical explosion records under the current filters</b> (${esc(filtersText(place,mt))}). ${xa.hist.eligible===0?"None of the 31 DGMS explosion records fall under these filters.":`The DGMS data has ${xa.hist.eligible} explosion record${xa.hist.eligible===1?"":"s"} under these filters, but none match “${esc(xa.cls.top.cat)}” or your wording.`} Synthetic scenarios are listed separately below.</p>
+        <div class="btns" style="margin-top:12px">${place||mt?`<button type="button" class="btn2" id="broaden">Search all places and mine types</button>`:""}<button type="button" class="btn2" id="allacc">Search all DGMS accidents</button></div></div></div></div>`;
+    const synBlock = xa.syn.matches.length ? listBlock("sx","Synthetic training scenarios", `<p class="partial">Generated examples from ${esc(X.source)}. They are <b>not</b> DGMS accidents, did not happen, and are never counted as evidence. Place-of-work filters are not applied to them because their work-area context is broad.</p>`) :
+      `<div class="block"><div class="sec-h reveal"><h2>Synthetic training scenarios</h2><span class="sub">None found</span></div><p class="partial">No synthetic scenario matches this description${mt?` for ${esc(mtLabel(mt))}`:""}.</p></div>`;
+    out.innerHTML = relaxedNote + hazardPanel(hz,probs,unclear,pct) + explosionPanel(xa,pct) + measuresHTMLBlock(top,mNote) + histBlock + synBlock;
+    if(xa.hist.matches.length) makePager("hx", xa.hist.matches, m=>caseHTML(m,xa.hist.qv,true), "historical explosion records", `(from ${xa.hist.eligible} explosion records ${place||mt?"in these filters":"in the DGMS data"})`);
+    if(xa.syn.matches.length) makePager("sx", xa.syn.matches, synHTML, "synthetic scenarios", `(from ${xa.syn.eligible}${mt?` for ${mtLabel(mt)}`:""})`);
+  } else {
+    // ----- general mode (unchanged behaviour) -----
+    let res;
+    if(browse) res=browseAll(place,mt); else res=rankAll(q,place,mt,unclear?null:hz.hazard);
+    const top=res.matches.slice(0,PAGE);
+    last={text,place,mt,probs,hits:top,unclear};
+    const hazardHTML = browse ? `<div class="notice reveal"><b>Browsing ${res.eligible} record${res.eligible===1?"":"s"}</b> for ${esc(filtersText(place,mt))}, newest first. Add a situation description to get the likely hazard, preventive measures and relevance ranking.</div>` : hazardPanel(hz,probs,unclear,pct);
+    const measuresBlock = (!browse && top.length) ? measuresHTMLBlock(top,"") : "";
+    const accBlock = res.matches.length ? listBlock("acc", browse?"Accident records":"Closest past accidents", !browse && res.matches.length<PAGE?`<p class="partial">Only ${res.matches.length} record${res.matches.length===1?"":"s"} in these filters relate to your description.</p>`:"")
+                                        : noMatchHTML(place,mt,browse,res.eligible,unclear);
+    out.innerHTML = (X?"":xErrHTML()) + relaxedNote + allNote + hazardHTML + measuresBlock + accBlock;
+    if(res.matches.length) makePager("acc", res.matches, m=>caseHTML(m,res.qv||null,false), browse?"records":"matching records",
+      browse?"":`(from ${res.eligible} ${opts.relaxed||(!place&&!mt)?"records in the full dataset":"records in these filters"})`);
+  }
+  const b=$("broaden"); if(b) b.onclick=()=>run({relaxed:true, noExplosion:opts.noExplosion});
+  const a=$("allacc"); if(a) a.onclick=()=>run({noExplosion:true, relaxed:opts.relaxed});
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ out.querySelectorAll("[data-w]").forEach(el=>{ el.style.width=el.dataset.w+"%"; }); }));
   wireAdvice();
 }
+
 let sample=null;
 function wireAdvice(){
   const box=$("adv"); if(!box) return;
@@ -590,7 +787,7 @@ Regulations: ${r.regulations}`).join("\n\n");
 
 The miner's job: ${last.text}
 Place: ${last.place||"not stated"} | Mine type: ${last.mt||"not stated"}
-Likely hazard: ${last.unclear?"unclear (top guesses: "+last.probs.slice(0,3).map(p=>p.hazard).join(", ")+")":last.probs[0].hazard}
+${last.xcat?`Explosion category (classifier trained on synthetic scenarios): ${last.xcat}\n`:""}Likely hazard: ${last.unclear?"unclear (top guesses: "+last.probs.slice(0,3).map(p=>p.hazard).join(", ")+")":last.probs[0].hazard}
 
 The miner has ALREADY been shown these preventive measures:
 ${shown}

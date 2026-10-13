@@ -1,0 +1,584 @@
+{
+  "_about": "Preventive measures extracted from the two reference books. 'measure' is a summary written for the app, NOT a quotation. Each ref records what the book does: 'states' = the book states this measure; 'case' = the book describes an accident or mechanism from which the measure is derived. Page numbers are printed page numbers read from the page headers of the supplied PDFs (Ramlu: scanned two-page spreads; Cheng: running headers). 'dgms_pattern' links the measure to DGMS findings of SANKET explosion accidents; 'keywords' only nudge ranking when the user's own words match. 'context' (optional) limits a measure to descriptions or mine types matching it, e.g. coal-specific or sulphide-ore-specific guidance.",
+  "books": {
+    "Ramlu": "Ramlu, M.A. Mine Disasters and Mine Rescue, 2nd edition. Universities Press (India), 2007.",
+    "Cheng": "Cheng, J. (2018). Explosions in Underground Coal Mines: Risk Assessment and Control. Springer International Publishing."
+  },
+  "guidance": [
+    {
+      "id": "G01",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Combined Methane and Coal-Dust Explosion",
+        "Electrical or Mechanical Ignition of Explosive Atmosphere",
+        "Metal Mine: Gas, Dust and Other Explosion Mechanisms"
+      ],
+      "measure": "Dilute firedamp with adequate ventilation and sample the mine air for methane frequently, at many points.",
+      "keywords": "ventilat|methane|firedamp|gas accumulat|air ?flow|fan",
+      "dgms_pattern": "inspected and examined for ventilation",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.1 Measures against accumulation of dangerous firedamp mixtures",
+          "pages": "99–100",
+          "support": "states",
+          "note": "Calls adequate ventilation that dilutes firedamp the most effective way of preventing firedamp explosions, and frequent sampling of mine air for methane at several points an important preventive measure."
+        },
+        {
+          "book": "Cheng",
+          "section": "1.2.2 Tunnels with Electrical Equipment",
+          "pages": "5–6",
+          "support": "case",
+          "note": "Tunlan mine (China, 2009, 78 deaths): very low air velocity in a crosscut let gas reach the flammable limit before it was ignited. The ventilation measure is derived from this case."
+        }
+      ]
+    },
+    {
+      "id": "G02",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Keep development headings ventilated up to the face: auxiliary fans properly installed and maintained so air reaches within about 5 m of the face without recirculation, and the primary current used during idle shifts.",
+      "keywords": "heading|development|auxiliary fan|face|gallery|drivage",
+      "dgms_pattern": "ventilation connection|coursing of current of air",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.1 (iv) Measures against accumulation",
+          "pages": "100",
+          "support": "states",
+          "note": "Auxiliary fans should be properly installed, maintained and located so that air is delivered within 5 m of the face and recirculation is eliminated; during weekends and idle shifts the place should be ventilated by the primary air current."
+        }
+      ]
+    },
+    {
+      "id": "G03",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Combined Methane and Coal-Dust Explosion",
+        "Spontaneous Heating, Fire and Explosion Escalation"
+      ],
+      "measure": "In gassy caving panels, control goaf firedamp by methane drainage (in-mine or surface boreholes) or bleeder systems where ventilation alone cannot keep methane down.",
+      "keywords": "goaf|gob|caving|drainage|longwall|depillar",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.1 (x) and 2.1.6.3 Control of firedamp emission / methane drainage",
+          "pages": "101, 106–113",
+          "support": "states",
+          "note": "Goaf firedamp in very gassy caving panels must be controlled by local or central drainage or surface boreholes; bleeder systems can move firedamp-air mixtures from caved areas to returns. Drainage is advised where ventilation alone cannot control methane."
+        },
+        {
+          "book": "Cheng",
+          "section": "1.2.1 Underground Working Faces",
+          "pages": "4",
+          "support": "case",
+          "note": "Upper Big Branch (USA, 2010, 29 deaths): methane accumulated in the gob behind the shields migrated to the longwall face and tailgate before ignition."
+        }
+      ]
+    },
+    {
+      "id": "G04",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Combined Methane and Coal-Dust Explosion",
+        "Electrical or Mechanical Ignition of Explosive Atmosphere"
+      ],
+      "measure": "Inspect every ventilated working place each shift for methane (faces, blind ends, cavities, roof high places) with an approved detector, test before intentional roof falls, and keep records.",
+      "keywords": "inspect|gas test|methane test|detector|cavit",
+      "dgms_pattern": "tests? for (?:the )?(?:presence of )?inflammable gas|inspected by a competent person for the presence of inflam",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.3.3 Inspections and reports",
+          "pages": "114",
+          "support": "states",
+          "note": "Inspections should be carried out during every shift in every ventilated district for methane in the general body of air and at faces, blind ends, faults and roof cavities, using an approved methane detector; methane should be checked before an intentional roof fall; records should be kept."
+        }
+      ]
+    },
+    {
+      "id": "G05",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Coal-Dust Explosion",
+        "Combined Methane and Coal-Dust Explosion",
+        "Electrical or Mechanical Ignition of Explosive Atmosphere",
+        "Blasting and Explosives-Related Explosion"
+      ],
+      "measure": "Keep smoking articles, matches and any other flame- or spark-producing devices out of the workings and explosive areas, and search persons for contraband.",
+      "keywords": "smok|match|lighter|phone|mobile|spark|flame",
+      "dgms_pattern": "capable of producing light, flame or spark|mobile telephone",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (i) Measures against ignition of flammable firedamp mixtures",
+          "pages": "102",
+          "support": "states",
+          "note": "All persons should be prohibited from carrying smoking articles, matches or other spark- or flame-making devices into the workings, and everyone entering the mine should be searched for contraband."
+        },
+        {
+          "book": "Cheng",
+          "section": "1.2 Recognition of Mine Gas Explosions Hazard",
+          "pages": "4",
+          "support": "states",
+          "note": "Lists strict control of ignition sources and prohibition of smoking among the precautions against methane ignitions."
+        }
+      ]
+    },
+    {
+      "id": "G06",
+      "mechanisms": [
+        "Electrical or Mechanical Ignition of Explosive Atmosphere",
+        "Methane / Firedamp Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Use only certified flameproof and intrinsically safe electrical apparatus, properly installed and maintained; cut power to districts where it is not needed and test for methane before re-energising.",
+      "keywords": "electric|switch|cable|motor|flame ?proof|enclosure|spark|arc",
+      "dgms_pattern": "flame ?proof|intrinsically safe|explosion.?proof",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (iii)(a)(b) Measures against ignition",
+          "pages": "103",
+          "support": "states",
+          "note": "Only certified flame-proof and intrinsically-safe apparatus should be used in coal mines, properly installed, protected, operated and maintained; power should be cut off where equipment is not needed and methane tested immediately before it is energised."
+        },
+        {
+          "book": "Cheng",
+          "section": "1.2.2 Tunnels with Electrical Equipment",
+          "pages": "5–6",
+          "support": "case",
+          "note": "Sparking from misuse or damage of electrical equipment can ignite methane gathered in poorly ventilated chambers; at Tunlan a poor-quality switch made the explosion-proof case fail and sparks escaped."
+        },
+        {
+          "book": "Ramlu",
+          "section": "2.1.5 Causes of firedamp explosions: electric sparks",
+          "pages": "98",
+          "support": "case",
+          "note": "Sparks from switchgear, damaged cables, signalling apparatus and faulty equipment are listed as ignition sources; minimum ignition energy is as low as 0.28 mJ near 8.3% methane."
+        }
+      ]
+    },
+    {
+      "id": "G07",
+      "mechanisms": [
+        "Electrical or Mechanical Ignition of Explosive Atmosphere",
+        "Methane / Firedamp Explosion"
+      ],
+      "measure": "Fit methane monitors that automatically cut power to face machines and electrical equipment at the prescribed limit, and keep them maintained and checked.",
+      "keywords": "monitor|cut.?off|shearer|continuous miner|machine|alarm",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (iii)(e)(f) Measures against ignition",
+          "pages": "103",
+          "support": "states",
+          "note": "A reliable methane monitor or cut-out that automatically cuts off power at the prescribed concentration may be installed; methane monitors should be fitted on face-cutting, continuous-mining, longwall and loading equipment and checked at regular intervals."
+        }
+      ]
+    },
+    {
+      "id": "G08",
+      "mechanisms": [
+        "Electrical or Mechanical Ignition of Explosive Atmosphere",
+        "Methane / Firedamp Explosion"
+      ],
+      "measure": "When the main fan stops, cut power in return airways; if an auxiliary fan stops, stop electrical equipment there until ventilation is restored; make ventilation changes only when the mine is idle and power is off.",
+      "keywords": "fan|ventilation stop|power|return",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (iii)(g)(h)(i) Measures against ignition",
+          "pages": "103",
+          "support": "states",
+          "note": "States these three power-and-ventilation rules."
+        }
+      ]
+    },
+    {
+      "id": "G09",
+      "mechanisms": [
+        "Electrical or Mechanical Ignition of Explosive Atmosphere"
+      ],
+      "measure": "Protect and suspend trailing cables, earth ventilation ducting and machinery, and use antistatic sheeting, hoses and belts to prevent static sparks.",
+      "keywords": "cable|static|belt|duct|earth",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (iii)(c)(d) Measures against ignition",
+          "pages": "103",
+          "support": "states",
+          "note": "Vulnerable trailing cables should be suspended and protected; ventilation ducting should be earthed and only antistatic polythene sheeting, hoses and belts used."
+        },
+        {
+          "book": "Ramlu",
+          "section": "1.1.1.7 Miscellaneous (mine fires)",
+          "pages": "24",
+          "support": "states",
+          "note": "Static from belts and dust-laden ducting can produce sparks; earthing all machinery to discharge static greatly reduces the danger."
+        }
+      ]
+    },
+    {
+      "id": "G10",
+      "mechanisms": [
+        "Electrical or Mechanical Ignition of Explosive Atmosphere",
+        "Methane / Firedamp Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Control frictional ignition at cutting and drilling machines: sharp, suitable picks, water sprays at the picks, adequate ventilation of the cut, and no light-alloy materials.",
+      "keywords": "cut|shearer|pick|drill|friction|sandstone|roof bolt",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (iv)(v) and 2.1.5 Friction",
+          "pages": "97–98, 103–104",
+          "support": "states",
+          "note": "Frictional sparks from metal-to-rock contact during cutting and drilling (especially in siliceous bands or pyrite) are a major ignition source; precautions include sharp picks, water sprays directed at the picks, lower pick speed, ventilating the cut, and prohibiting light alloys."
+        },
+        {
+          "book": "Cheng",
+          "section": "1.2.1 Underground Working Faces",
+          "pages": "4",
+          "support": "case",
+          "note": "At Upper Big Branch the shearer cutting into sandstone roof produced the sparks that ignited methane."
+        }
+      ]
+    },
+    {
+      "id": "G11",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Blasting and Explosives-Related Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Where firedamp may be present, keep blasting to a minimum, examine for methane immediately before charging and firing, and use water stemming or permitted blasting alternatives.",
+      "keywords": "blast|shot|charg|explosive|stemming|fir",
+      "dgms_pattern": "inflammable gas.{0,120}(?:charging|firing)|(?:charging|firing).{0,120}inflammable gas|tests? for inflammable gas been made in the area lying within",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (vii) Measures against ignition",
+          "pages": "105",
+          "support": "states",
+          "note": "Blasting with explosives should be restricted to a minimum, an examination for methane should be made immediately before blasting, and water stemming or alternatives to ordinary explosives may be used."
+        },
+        {
+          "book": "Ramlu",
+          "section": "2.1.5 Causes of firedamp explosions: blasting",
+          "pages": "97",
+          "support": "case",
+          "note": "Blasting in coal and in roadhead rippings and drifts was a dangerous source of firedamp ignition in the past."
+        }
+      ],
+      "context": "coal|gas|methane|firedamp|underground|gallery|heading|seam"
+    },
+    {
+      "id": "G12",
+      "mechanisms": [
+        "Electrical or Mechanical Ignition of Explosive Atmosphere",
+        "Methane / Firedamp Explosion",
+        "Spontaneous Heating, Fire and Explosion Escalation",
+        "Metal Mine: Gas, Dust and Other Explosion Mechanisms"
+      ],
+      "measure": "Carry out welding, gas cutting and other flame work only by competent persons under supervision, in places free from firedamp and coal dust, with methane examinations before and during the work and fire-extinguishing appliances and stone dust at hand.",
+      "keywords": "weld|gas cutt|hot work|flame cutt|torch|tank|drum|vessel",
+      "dgms_pattern": "gas cutting|hot work|welder|blind plates|vapour seal|hydrocarbons entrapped",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.6.2 (viii) Measures against ignition",
+          "pages": "105",
+          "support": "states",
+          "note": "Welding, flame cutting and similar work underground must be done with precautions, with examinations for methane immediately before and periodically during the work."
+        },
+        {
+          "book": "Ramlu",
+          "section": "1.1.1.7 Miscellaneous (mine fires)",
+          "pages": "24",
+          "support": "states",
+          "note": "Welding, cutting and soldering should be performed only by competent persons under constant supervision of a qualified person, at places free from danger due to firedamp or coal dust, with fire-extinguishing appliances and stone dust immediately available."
+        }
+      ]
+    },
+    {
+      "id": "G13",
+      "mechanisms": [
+        "Coal-Dust Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Stone-dust (rock-dust) all roadways so that mine dust always holds at least the prescribed incombustible content, raised where methane is present, and re-apply it at regular intervals.",
+      "keywords": "coal dust|dust|roadway|belt|stone ?dust|rock ?dust",
+      "dgms_pattern": "stone ?dust|rock ?dust|incombustible",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.2.9.3.2 Generalized stonedusting",
+          "pages": "136–139",
+          "support": "states",
+          "note": "Gives the minimum incombustible content of mine dust as 70% in India, 80% in Germany and 65% in the USA, to be raised for each 1% of methane in the air; stone dust must be applied at regular intervals because coal dust keeps depositing. Notes that stone dust is not recommended in base metal mines (p. 137)."
+        },
+        {
+          "book": "Cheng",
+          "section": "2.3.1 Rock Dusting",
+          "pages": "35–37",
+          "support": "states",
+          "note": "Rock dust acts as isolator and heat sink; MSHA raised the US requirement in 2010 to at least 80% total incombustible content plus 0.4% for each 0.1% methane; rock dust should contain at most 5% combustible matter and 4% silica."
+        }
+      ],
+      "conflict": "The books give different US figures (Ramlu 65%; Cheng 80% after MSHA's 2010 rule). Ramlu's 70% is the figure for India. Both are kept as written."
+    },
+    {
+      "id": "G14",
+      "mechanisms": [
+        "Coal-Dust Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Reduce the formation and spread of coal dust: water infusion of the seam, wet cutting with sprays, hooded and water-sprayed conveyor transfer points, preventing spillage, and regular cleaning of deposited dust from roadways.",
+      "keywords": "coal dust|dust|conveyor|belt|transfer|spillage|cutting",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.2.9.1 Measures which prevent or reduce formation and dissemination of coal dust",
+          "pages": "131–135",
+          "support": "states",
+          "note": "Lists water infusion, wet cutting and sprays, covering conveyors and enclosing and spraying transfer points, avoiding spillage, dust collectors, and systematic cleaning of haulage roads and returns."
+        }
+      ]
+    },
+    {
+      "id": "G15",
+      "mechanisms": [
+        "Coal-Dust Explosion",
+        "Combined Methane and Coal-Dust Explosion",
+        "Blasting and Explosives-Related Explosion"
+      ],
+      "measure": "Before shotfiring in coal, neutralise or consolidate dust within 10–20 m of the face with water or inert dust.",
+      "keywords": "blast|shot|fir|dust|coal face",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.2.9.2 Measures against ignition of dust accumulations",
+          "pages": "135",
+          "support": "states",
+          "note": "Dust at working coal faces within a radius of 10 to 20 m should be neutralised or consolidated with water or inert dust before shotfiring."
+        },
+        {
+          "book": "Ramlu",
+          "section": "2.2.9.3.1 Generalized wetting of coal dust",
+          "pages": "136",
+          "support": "states",
+          "note": "Water sprays installed not more than 20 m from working faces are regarded as effective against initiation of coal-dust and firedamp explosions by blasting."
+        }
+      ],
+      "context": "coal"
+    },
+    {
+      "id": "G16",
+      "mechanisms": [
+        "Coal-Dust Explosion",
+        "Combined Methane and Coal-Dust Explosion",
+        "Methane / Firedamp Explosion"
+      ],
+      "measure": "Confine explosions with correctly sited, designed, installed and maintained stone-dust or water barriers or explosion stoppings.",
+      "keywords": "barrier|propagat|roadway|explosion spread",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.2.9.3 Measures against explosion propagation",
+          "pages": "135",
+          "support": "states",
+          "note": "Lists generalized wetting, stonedusting, stonedust barriers, explosion stoppings, salt zones, water barriers and triggered barriers as measures to confine a coal-dust explosion."
+        },
+        {
+          "book": "Cheng",
+          "section": "2.3.1 Rock Dusting; 2.3.2 Stonedust and Water Barriers",
+          "pages": "37–39",
+          "support": "states",
+          "note": "Barrier failures are mostly due to improper location, design, installation and maintenance; barriers placed closer than 60 m to the ignition point may not be dispersed. Cheng adds that the effectiveness of water barriers is now questioned."
+        }
+      ],
+      "conflict": "Ramlu lists water barriers among confinement measures; Cheng reports their effectiveness is questioned after Chinese experience. Both views are shown."
+    },
+    {
+      "id": "G17",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Coal-Dust Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Consider water-mist curtains at working faces and active explosion-suppression systems, and combine two or more control methods rather than relying on one.",
+      "keywords": "suppress|mist|face|longwall",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Cheng",
+          "section": "2.3.3 Water Mist Curtain; 2.3.5 ExploSpot Active Suppression; 2.3.8 Discussion; Table 2.4",
+          "pages": "39–40, 42–43, 46–47",
+          "support": "states",
+          "note": "Water mist significantly suppresses methane-air explosions and suits working-face areas; active suppression systems detect the flame and release agent to stop propagation; Cheng recommends using two or more methods together."
+        }
+      ]
+    },
+    {
+      "id": "G18",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Spontaneous Heating, Fire and Explosion Escalation",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Seal or ventilate worked-out areas promptly, using solid, substantial and incombustible seals sited where strata convergence is low, built to correct procedures and designed to withstand explosion pressure.",
+      "keywords": "seal|goaf|gob|abandon|worked.?out|stopping",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Cheng",
+          "section": "2.1.3 Mine Seal Practices",
+          "pages": "17",
+          "support": "states",
+          "note": "Abandoned areas must be ventilated or sealed; the 1969 US Coal Act required solid, substantial and incombustible seals; seals should be located where entry closure or crushing is minimal, and high-quality construction reduces leakage."
+        },
+        {
+          "book": "Cheng",
+          "section": "1.2.3 Mine Gob Areas",
+          "pages": "7–10",
+          "support": "case",
+          "note": "Darby Mine No. 1 (2006, 5 deaths): improper seal construction and unsafe repair work led to an explosion behind seals; seals rated 140 kPa failed in US incidents, where 345–500 kPa standards abroad did not."
+        },
+        {
+          "book": "Ramlu",
+          "section": "1.1.1.2.9 Prevention of spontaneous combustion: coal winning (7)",
+          "pages": "20",
+          "support": "states",
+          "note": "Worked-out areas should be effectively sealed off as soon as possible or ventilated, with bleeder entries if ventilated."
+        }
+      ]
+    },
+    {
+      "id": "G19",
+      "mechanisms": [
+        "Spontaneous Heating, Fire and Explosion Escalation",
+        "Methane / Firedamp Explosion"
+      ],
+      "measure": "Monitor sealed-area atmospheres for explosibility, especially in the critical period after sealing, and make an explosive atmosphere safe by inert-gas injection or controlled fresh-air dilution; do not open or rebuild seals without assessment.",
+      "keywords": "seal|nitrogen|inert|sealed|fire area|goaf",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Cheng",
+          "section": "1.2.3 Mine Gob Areas; 1.3 Complexities in Mine Gas Explosion",
+          "pages": "7–10",
+          "support": "states",
+          "note": "A newly sealed atmosphere passes through the explosive range (methane 5–15%) during a 'critical' period when most sealed-area explosions have occurred."
+        },
+        {
+          "book": "Cheng",
+          "section": "5.2.2 Best way of inerting an explosive gas-mixture",
+          "pages": "163",
+          "support": "states",
+          "note": "To make an explosive sealed atmosphere safe, move it out of the explosive triangle by injecting inert gas or ventilating with fresh air; adding combustible gas is too dangerous."
+        },
+        {
+          "book": "Cheng",
+          "section": "Table 2.3 Typical coal mine explosion accidents since 2005",
+          "pages": "33–34",
+          "support": "case",
+          "note": "Several listed explosions followed unauthorised opening of seals or rebuilding of destroyed seals."
+        }
+      ]
+    },
+    {
+      "id": "G20",
+      "mechanisms": [
+        "Spontaneous Heating, Fire and Explosion Escalation"
+      ],
+      "measure": "Prevent spontaneous heating: independent panel ventilation, extraction within the incubation period, minimal air leakage, removal of loose coal and combustible waste, daily CO checks in district returns, and inspections every shift and on idle days.",
+      "keywords": "spontaneous|heating|self.?heat|goaf|stockpile|fire|smoke|co\\b",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "1.1.1.2.9 Prevention of spontaneous combustion of coal in coal mines",
+          "pages": "18–21",
+          "support": "states",
+          "note": "Lists development, coal-winning, roof-control, ventilation and inspection measures, including panels with independent ventilation, complete extraction within the incubation period, clearing loose coal and combustible waste, checking return air for CO at least once a day, and inspection each shift and on idle days."
+        }
+      ]
+    },
+    {
+      "id": "G21",
+      "mechanisms": [
+        "Spontaneous Heating, Fire and Explosion Escalation"
+      ],
+      "measure": "When sealing a fire where a firegas or firedamp explosion is possible, first erect high-strength, explosion-proof temporary stoppings in intake and return, sited well away from the fire seat, then the permanent stoppings.",
+      "keywords": "seal|fire|stopping",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "1.1.4.2.2.2 Sealing off with explosion hazard",
+          "pages": "50–51",
+          "support": "states",
+          "note": "High-strength explosion-proof, airtight temporary stoppings should first be erected in intake and return airways, followed later by permanent stoppings, with stoppings sited as far from the fire seat as possible."
+        },
+        {
+          "book": "Cheng",
+          "section": "Table 2.3 Typical coal mine explosion accidents since 2005",
+          "pages": "33–34",
+          "support": "case",
+          "note": "Shuangxin (2006): building a closed area to seal a spontaneous-combustion fire in the gob led to a gas explosion."
+        }
+      ]
+    },
+    {
+      "id": "G22",
+      "mechanisms": [
+        "Metal Mine: Gas, Dust and Other Explosion Mechanisms",
+        "Blasting and Explosives-Related Explosion"
+      ],
+      "measure": "In sulphide-ore (base metal) mines, reduce ore-dust explosion risk during blasting: low-incendivity explosives, a drill pattern that prevents rifling, accurate drilling, careful charge loading, inert stemming in hole collars, washing down walls and backs before blasting, and water-mist curtains during the blast.",
+      "keywords": "sulphide|pyrite|ore|metal|base metal|stope|blast",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.4 Sulphide Ore-Dust Explosions",
+          "pages": "165–166",
+          "support": "states",
+          "note": "Sulphide ore-dust explosions occurred during blasting in Canadian base metal mines with pyrite/pyrrhotite ores; lists these seven precautionary measures."
+        }
+      ],
+      "context": "metal|ore|sulphide|pyrite|pyrrhotite|base metal|copper|zinc|lead"
+    },
+    {
+      "id": "G23",
+      "mechanisms": [
+        "Methane / Firedamp Explosion",
+        "Combined Methane and Coal-Dust Explosion"
+      ],
+      "measure": "Limit the spread of an explosion: separate ventilation districts with robust air-crossings, explosion-proof blasting dams in long gassy headings, measures against coal-dust propagation, and an efficient rescue organisation.",
+      "keywords": "district|heading|rescue|propagat",
+      "dgms_pattern": "",
+      "refs": [
+        {
+          "book": "Ramlu",
+          "section": "2.1.7 Localization of firedamp explosions",
+          "pages": "115",
+          "support": "states",
+          "note": "Lists these four ways of localizing firedamp explosions."
+        }
+      ]
+    }
+  ],
+  "uncovered_by_books": "Neither book discusses blasting misfires, premature initiation by lightning, flyrock, blasting danger zones and shelters, or handling and transport of explosives. Measures for these come only from DGMS findings."
+}

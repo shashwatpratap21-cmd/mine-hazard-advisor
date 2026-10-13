@@ -203,6 +203,16 @@ details.more summary:hover{color:var(--text)}
 .syn-t{margin:0;color:var(--text);font-size:1rem}
 .linkbtn{justify-self:start;background:none;border:0;padding:0;color:var(--text-2);font:500 .92rem var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .linkbtn:hover{color:var(--text)}
+.cause{margin:0;color:var(--text-2);font-size:.95rem}
+.cause b{color:var(--text);font-weight:500}
+.prov.src{color:var(--text-2);border-color:var(--line-2);background:rgba(255,255,255,.03)}
+.prov.ok{color:#9FE0C0;border-color:rgba(85,214,160,.4);background:rgba(85,214,160,.08)}
+.gtags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.gcard .t{font-weight:500}
+.gev{display:grid;gap:6px;margin-top:10px;padding:12px 14px;border-radius:var(--r-sm);background:var(--inset);border:1px solid var(--line);font-size:.92rem;color:var(--text-2)}
+.gev p{margin:0} .gev ul{margin:0;padding-left:18px;display:grid;gap:8px}
+.gev b{color:var(--text);font-weight:500}
+.glabel{margin-top:6px!important;font:600 .78rem/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
 </style>
 
 <div class="wrap">
@@ -501,29 +511,39 @@ function mineContext(text, mt){
   return {label: coal&&!metal?"Coal (from description)":metal&&!coal?"Metal / non-coal (from description)":coal&&metal?"Coal and metal both mentioned":"Not stated", from:"text", coal, metal:metal&&!coal};
 }
 // Mechanisms that are genuinely related (shared ignition / flammable-atmosphere or blasting mechanism).
-// A historical record is listed only if it has the SAME category, a RELATED one with some shared wording, or strong shared wording.
 const HYDRO="Outside taxonomy: Hydrocarbon/vapour explosion in vessel (hot work)";
+const GASDUST="Gas or coal-dust explosion (type not recorded)";
 const RELATED={
-  "Methane / Firedamp Explosion":[HYDRO],
-  "Coal-Dust Explosion":["Methane / Firedamp Explosion"],
-  "Combined Methane and Coal-Dust Explosion":["Methane / Firedamp Explosion"],
+  "Methane / Firedamp Explosion":[GASDUST,HYDRO,"Combined Methane and Coal-Dust Explosion"],
+  "Coal-Dust Explosion":[GASDUST,"Combined Methane and Coal-Dust Explosion","Methane / Firedamp Explosion"],
+  "Combined Methane and Coal-Dust Explosion":[GASDUST,"Coal-Dust Explosion","Methane / Firedamp Explosion"],
   "Blasting and Explosives-Related Explosion":[],
   "Electrical or Mechanical Ignition of Explosive Atmosphere":["Methane / Firedamp Explosion",HYDRO],
-  "Spontaneous Heating, Fire and Explosion Escalation":["Methane / Firedamp Explosion",HYDRO],
-  "Metal Mine: Gas, Dust and Other Explosion Mechanisms":["Blasting and Explosives-Related Explosion","Methane / Firedamp Explosion",HYDRO]};
-// Historical explosion records: the 31 DGMS core explosion events, filtered, ranked by text similarity + 0.15 same / +0.05 related category
+  "Spontaneous Heating, Fire and Explosion Escalation":["Methane / Firedamp Explosion",GASDUST,HYDRO],
+  "Metal Mine: Gas, Dust and Other Explosion Mechanisms":["Blasting and Explosives-Related Explosion",HYDRO]};
+// SANKET explosion records (coal + non-coal). Narratives carry text and DGMS findings; major-accident list rows carry only a cause label.
+const CLOSE={
+  "Methane / Firedamp Explosion":[GASDUST,"Combined Methane and Coal-Dust Explosion"],
+  "Coal-Dust Explosion":[GASDUST,"Combined Methane and Coal-Dust Explosion"],
+  "Combined Methane and Coal-Dust Explosion":[GASDUST,"Coal-Dust Explosion","Methane / Firedamp Explosion"]};
+const HREC=X?X.hrec:[];
+const HVEC=HREC.map(h=>vectorize([h.situation,h.cause_label,h.reported_cause,h.ignition,h.mineral].join(" "), RET_IDX, D.ret.idf));
+function hPlaceOk(h,place){ if(!place) return true; if(!h.place||/not reported/i.test(h.place)) return null; return h.place===place||(place==="Opencast"&&h.place==="Above Ground"); }
 function rankHistX(q, place, mt, cat){
-  const qv=vectorize(q, RET_IDX, D.ret.idf), out=[]; let eligible=0;
-  KB.forEach((r,i)=>{
-    const xc=X.hist_xcat[r.id]; if(!xc||!inFilters(r,place,mt)) return;
+  const qv=vectorize(q, RET_IDX, D.ret.idf), out=[]; let eligible=0, unknownPlace=0;
+  HREC.forEach((h,i)=>{
+    if(mt && h.mine_type!==mt) return;
+    const pOk=hPlaceOk(h,place); if(pOk===false) return; if(pOk===null){ if(h.xcat===cat) unknownPlace++; return; }
     eligible++;
-    let sim=0; const d=DOCS[i]; for(const [j,w] of qv){ const x=d.get(j); if(x) sim+=x*w; }
-    const same=xc===cat, related=!same&&(RELATED[cat]||[]).includes(xc);
-    if(same||(related&&sim>=0.05)||sim>=0.15) out.push({r,sim,same,related,xc,score:sim+(same?0.15:related?0.05:0)});
+    let sim=0; for(const [j,w] of qv){ const x=HVEC[i].get(j); if(x) sim+=x*w; }
+    const same=h.xcat===cat, related=!same&&(RELATED[cat]||[]).includes(h.xcat);
+    const close=(CLOSE[cat]||[]).includes(h.xcat);
+    if(same||(related&&(sim>=0.03||(close&&h.kind==="list")))||sim>=0.15) out.push({h,sim,same,related,score:sim+(same?0.15:related?0.08:0)});
   });
-  out.sort((a,b)=>b.score-a.score);
-  return {qv, eligible, matches:out, nSame:out.filter(m=>m.same).length};
+  out.sort((a,b)=>b.score-a.score||(b.h.year||0)-(a.h.year||0));
+  return {qv, eligible, unknownPlace, matches:out, nSame:out.filter(m=>m.same).length};
 }
+function mechCounts(cat){ const c={coal:0,noncoal:0,narr:0,list:0}; HREC.forEach(h=>{ if(h.xcat!==cat) return; h.src.startsWith("Coal")?c.coal++:c.noncoal++; h.kind==="narrative"?c.narr++:c.list++; }); return c; }
 // Synthetic scenarios: separate index, ranked by text similarity + 0.10 for the same category, mine-type context only
 function synMineOk(ctx, mt){
   if(!mt) return true;
@@ -595,6 +615,116 @@ function caseHTML({r,score,sim,same,related,xc}, qv, xmode){
       </details>
     </article>`;
 }
+// ---------- SANKET explosion record card ----------
+function xCaseHTML({h,score,sim,same,related}, qv){
+  const fs=h.findings||[];
+  const regs=[...new Set((h.regulations.match(/Reg \d+(?:\(\w+\))*|Sec(?:tion)? \d+(?:\(\w+\))*/g)||[]))].slice(0,4);
+  const terms=qv&&h.kind==="narrative"?(()=>{ const i=HREC.indexOf(h), out=[]; for(const [j,w] of qv){ const x=HVEC[i].get(j); if(x) out.push([D.ret.terms[j],x*w]); } return out.sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]); })():[];
+  const why=[terms.length?"shared terms: "+terms.join(", "):"", same?"same explosion category as predicted (+0.15)":related?"related explosion mechanism (+0.08)":""].filter(Boolean).join(" · ")+` · score ${score.toFixed(2)}`;
+  const isList=h.kind==="list";
+  const page=`${esc(h.doc)}, PDF p.${esc(String(h.pdf_page??"—"))}${h.printed_page?` (printed p.${esc(String(h.printed_page))})`:""}${h.table?` · ${esc(h.table)}`:""}`;
+  return `
+    <article class="case card reveal">
+      <div class="case-h"><span class="rid">${esc(h.id)}</span><h3 class="mine">${esc(titleCase(h.mine))}</h3><span class="yr">${esc(String(h.year??h.date))}</span>
+        <span class="killed">${h.killed} killed${h.injured?` · ${h.injured} injured`:""}</span></div>
+      <div class="tags">${TAG_HIST}<span class="prov src">${esc(h.src)}</span><span class="prov cat">${esc(h.xcat)}</span>${isList?`<span class="prov pot">Cause label only</span>`:""}</div>
+      <p class="cause">Cause as recorded by DGMS: <b>“${esc(h.cause_label)}”</b>${h.dgms_id?` · DGMS record ${esc(h.dgms_id)}`:""}</p>
+      ${isList?`<p class="partial">This accident appears only in SANKET's list of major accidents (four or more killed). The source gives no narrative and no inspector findings, so nothing beyond the cause label is established.</p>`
+              :`<p class="sit">${esc(shortSit(h.situation))}</p>`}
+      ${!isList?(fs.length?`<div class="findings"><h4>Key DGMS finding${fs.length>1?"s":""}</h4><ul class="lessons">${fs.slice(0,2).map(m=>`<li>${esc(shortMeasure(m))}</li>`).join("")}</ul></div>`
+                          :`<p class="partial">No DGMS findings were printed for this accident, so its preventive lessons are not recorded.</p>`):""}
+      <div class="src">${page}${regs.length?` · ${regs.map(esc).join(", ")}`:""}</div>
+      <details class="more"><summary>More details</summary>
+        <div class="full">
+          <dl class="kv">
+            <dt>Date (as printed)</dt><dd>${esc(h.date)}</dd>
+            <dt>Location</dt><dd>${esc(h.state)}${h.district?` · ${esc(h.district)}`:""} · ${esc(h.mineral||"mineral not recorded")} · ${esc(h.place)} · ${esc(mtLabel(h.mine_type))}</dd>
+            <dt>Project category</dt><dd>${esc(h.cat_std)} → ${esc(h.xcat)}</dd>
+            ${h.ignition&&!isList?`<dt>Ignition source (reported)</dt><dd>${esc(h.ignition)}</dd>`:""}
+            <dt>Cause status</dt><dd>${esc(h.cause_status)}</dd>
+            <dt>Why it is listed</dt><dd>${esc(why)}</dd>
+            ${h.regulations?`<dt>Regulations</dt><dd>${esc(h.regulations)}</dd>`:""}
+            ${h.also_listed?`<dt>Duplicate</dt><dd>Also listed in the major-accident list as ${esc(h.also_listed)}; counted once.</dd>`:""}
+            ${h.notes?`<dt>Notes</dt><dd>${esc(h.notes)}</dd>`:""}
+          </dl>
+          ${!isList&&h.situation?`<p class="sit">${esc(h.situation)}</p>`:""}
+          ${fs.length?`<div class="findings"><h4>All DGMS findings: the accident could have been averted…</h4><ul class="measures">${fs.map(x=>`<li><em>Had</em> ${esc(x)}</li>`).join("")}</ul></div>`:""}
+        </div>
+      </details>
+    </article>`;
+}
+
+// ---------- book-backed preventive measures (explosion mode) ----------
+const BOOK_SHORT={Ramlu:"Ramlu, Mine Disasters and Mine Rescue",Cheng:"Cheng, Explosions in Underground Coal Mines"};
+// DGMS finding themes that a displayed book measure already covers
+const THEME_TO_G={gas:["G01","G04","G11"],electric:["G06"],phone:["G05"]};
+function gStatus(g){
+  const stating=[...new Set(g.refs.filter(r=>r.support==="states").map(r=>r.book))];
+  const book= stating.length===2?"Stated in both books":stating.length===1?`Stated in ${stating[0]}`:"Derived from a case in the book";
+  const overall= stating.length||g.links.length? "Directly supported by source" : g.refs.length? "Derived from multiple sources" : "Insufficient evidence";
+  return {book, overall};
+}
+function pickGuidance(cat, text, topIds, mt){
+  const rel=RELATED[cat]||[], ctxText=text+" "+(mt||"");
+  const score=g=>{ const own=g.mechanisms.includes(cat)?2:g.mechanisms.some(m=>rel.includes(m))?0.7:0; if(!own) return 0;
+    const kw=g.keywords&&new RegExp(g.keywords,"i").test(text)?1:0, here=g.links.filter(l=>topIds.has(l[0])).length;
+    return own+kw+here*1.5+g.links.length*0.3+g.refs.filter(r=>r.support==="states").length*0.2; };
+  return X.guidance.filter(g=>!g.context||new RegExp("\\b(?:"+g.context+")","i").test(ctxText)).map(g=>({g,s:score(g)})).filter(x=>x.s>=2).sort((a,b)=>b.s-a.s).slice(0,6).map(x=>x.g);
+}
+function guidanceCard(g, i, cat, topIds){
+  const st=gStatus(g), mc=mechCounts(cat), byId=Object.fromEntries(HREC.map(h=>[h.id,h]));
+  const linksHere=g.links.filter(l=>topIds.has(l[0]));
+  return `<li class="act card gcard"><span class="num" aria-hidden="true">${i+1}</span>
+    <div class="t">${esc(g.measure)}
+      <div class="gtags"><span class="prov ok">${esc(st.overall)}</span><span class="prov src">${esc(st.book)}</span>
+        <span class="prov ${g.links.length?"hist":"cat"}">${g.links.length?`${g.links.length} DGMS accident${g.links.length>1?"s":""} support this`:"No DGMS finding states this"}</span></div></div>
+    <details class="ev"><summary>Evidence and references</summary>
+      <div class="gev">
+        <p class="glabel">Mechanisms addressed</p><p>${g.mechanisms.map(esc).join(" · ")}</p>
+        <p class="glabel">Reference-book guidance</p>
+        <ul>${g.refs.map(r=>`<li><b>${esc(BOOK_SHORT[r.book])}</b>, §${esc(r.section)}, p.${esc(r.pages)}. <i>${r.support==="states"?"The book states this measure.":"The book describes a case; the measure is derived from it."}</i><br>${esc(r.note)}</li>`).join("")}</ul>
+        ${g.conflict?`<p class="glabel">Where the books differ</p><p>${esc(g.conflict)}</p>`:""}
+        <p class="glabel">Historical evidence (DGMS SANKET findings)</p>
+        ${g.links.length?`<ul>${g.links.map(([id,f])=>{ const h=byId[id]; return `<li><b>${esc(id)}</b>${h?` (${esc(h.dgms_id)}), ${esc(titleCase(h.mine))} ${esc(String(h.year))}, ${esc(h.src)}`:""}${linksHere.some(l=>l[0]===id)?" · <i>in the results below</i>":""}<br>DGMS finding: the accident could have been averted had ${esc(f)}</li>`; }).join("")}</ul>`
+                        :`<p>No DGMS finding in the SANKET explosion records states this measure.</p>`}
+        <p>${mc.coal+mc.noncoal} SANKET accident${mc.coal+mc.noncoal===1?"":"s"} of the predicted mechanism (${mc.coal} coal, ${mc.noncoal} non-coal; ${mc.list} with a cause label only).</p>
+        <p class="interp">The measure text is a summary written for this app, not a quotation from either book or from DGMS.</p>
+      </div></details></li>`;
+}
+function xMeasuresBlock(cat, text, top, mt){
+  const topIds=new Set(top.map(m=>m.h.id));
+  const gs=pickGuidance(cat, text, topIds, mt), shownG=new Set(gs.map(g=>g.id));
+  // DGMS finding themes from the closest historical records that the book measures do not already cover
+  const narr=top.filter(m=>m.h.findings&&m.h.findings.length).map(m=>({r:{id:m.h.id,measures:m.h.findings.join(" | ")},score:m.score}));
+  const tms=narr.length?topMeasures(narr):[];
+  const dgmsOnly=tms.filter(m=>{ const k=(THEMES.find(([k,,t])=>t===m.text)||[])[0]; return !(THEME_TO_G[k]||[]).some(id=>shownG.has(id)); });
+  // one list, ordered by how many of the matched historical accidents support each measure (book measures first on ties)
+  const items=[...gs.map(g=>({kind:"g",g,here:g.links.filter(l=>topIds.has(l[0])).length})),...dgmsOnly.map(m=>({kind:"d",m,here:m.ids.length}))]
+    .sort((a,b)=>b.here-a.here||(a.kind==="g"?-1:1)-(b.kind==="g"?-1:1));
+  const html=items.map((it,i)=>it.kind==="g"?guidanceCard(it.g,i,cat,topIds):dgmsCard(it.m,i)).join("");
+  const gHTML=html, dHTML="";
+  function dgmsCard(m,i){ return `<li class="act card"><span class="num" aria-hidden="true">${i+1}</span><div class="t">${esc(m.text)}
+      <div class="gtags"><span class="prov ok">Directly supported by source</span><span class="prov hist">DGMS findings only</span><span class="prov cat">Neither book covers this</span></div></div>
+      <details class="ev"><summary>Based on ${m.ids.length} historical accident${m.ids.length>1?"s":""}</summary><p>DGMS findings of ${m.ids.map(esc).join(", ")}${m.regs.length?" · "+m.regs.map(esc).join(", "):""}. Neither Ramlu nor Cheng discusses this measure.</p></details></li>`; }
+  const none=!gs.length&&!dgmsOnly.length;
+  return `
+    <div class="block reveal">
+      <div class="sec-h"><h2>Preventive measures</h2><span class="sub">${esc(cat)}</span></div>
+      <p class="partial">Book measures come from Ramlu and Cheng, with the section and page cited. DGMS findings come from the closest SANKET explosion accidents. Open “Evidence and references” on any measure to check its sources.</p>
+      ${none?`<div class="notice warn"><b>Insufficient evidence.</b> Neither reference book gives guidance for this mechanism, and no DGMS finding among the matched accidents states a preventive measure.</div>`:""}
+      ${!gs.length&&!none?`<div class="notice">Neither reference book gives guidance for “${esc(cat)}”. The measures below come from DGMS findings only.</div>`:""}
+      ${gHTML||dHTML?`<ol class="acts">${gHTML}${dHTML}</ol>`:""}
+      ${/Blasting/.test(cat)?`<p class="partial">${esc(X.uncovered_by_books)}</p>`:""}
+    </div>
+    ${top.length?`<div class="advice card reveal" id="adv" hidden>
+      <div class="sec-h"><h2>More recommendations</h2></div>
+      <p class="why">Claude suggests measures not already listed above, using the DGMS findings of the ${top.length} closest historical accidents and the job you described. These are AI suggestions, not DGMS findings or book guidance.</p>
+      <div class="advice-body" id="advBody"></div>
+      <div class="btns"><button type="button" class="btn2" id="advGo">Get more recommendations</button><button type="button" class="btn2" id="advStop" hidden>Stop</button></div>
+      <p class="note" id="advNote"></p>
+    </div>`:""}`;
+}
+
 function synHTML({s,sim,same,score}){
   const [id,text,cat,mctx,pctx,isEvent]=s;
   return `<article class="syncard reveal">
@@ -677,14 +807,12 @@ function explosionPanel(xa, pct){
             <dt>Explosion evidence</dt><dd>${feats.map(f=>`<span class="pill">${esc(f)}</span>`).join(" ")}</dd>
             <dt>Words behind the category</dt><dd>${cls.terms.length?cls.terms.map(esc).join(", "):"none specific"}</dd>
             <dt>Mine context</dt><dd>${esc(ctx.label)}</dd>
-            <dt>Records found</dt><dd>${nHist} historical explosion record${nHist===1?"":"s"} · ${nSyn} synthetic scenario${nSyn===1?"":"s"}</dd>
+            <dt>Records found</dt><dd>${nHist} historical SANKET explosion record${nHist===1?"":"s"} (${xa.hist.matches.filter(m=>m.h.src.startsWith("Coal")).length} coal, ${xa.hist.matches.filter(m=>!m.h.src.startsWith("Coal")).length} non-coal) · ${nSyn} synthetic scenario${nSyn===1?"":"s"}</dd>
           </dl>
         </div>
         <div class="alts"><span class="label">Explosion categories</span>
           ${cls.probs.slice(0,4).map((c,i)=>`<div class="bar ${i===0&&!cls.ambiguous?"top":""}"><span>${esc(c.cat)}</span><span class="p">${pct(c.p)}%</span><div class="track"><div class="fill" data-w="${(c.p*100).toFixed(1)}"></div></div></div>`).join("")}
-          <div class="subj"><span class="label">Subject areas to review</span>
-            <ul>${(X.subject_areas[t.cat]||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
-            <p class="interp">General guidance for this mechanism, not drawn from DGMS findings.</p></div>
+
         </div>
       </div>
     </div>`;
@@ -738,18 +866,15 @@ function run(opts={}){
   if(xa){
     // ----- explosion mode -----
     const top=xa.hist.matches.slice(0,PAGE);
-    last={text,place,mt,probs,hits:top,unclear,xcat:xa.cls.top.cat};
-    const few=top.length>0&&top.length<2;
-    const mNote=!top.length?`<div class="notice reveal"><b>No historical DGMS explosion record supports specific measures for this situation.</b> See the general subject areas in the explosion analysis above, and treat any synthetic scenario as an example, not evidence.</div>`
-                 :few?`<p class="partial">Only one historical explosion record matched, so these measures rest on a single accident.</p>`:"";
-    const histBlock = xa.hist.matches.length ? listBlock("hx","Historical explosion records", (xa.hist.nSame===0?`<p class="partial"><b>No historical DGMS record of the category “${esc(xa.cls.top.cat)}”.</b> The records below involve a related mechanism or share strong wording; they are context, not direct precedents.</p>`:"")+`<button type="button" class="linkbtn" id="allacc">Show all DGMS accidents, not only explosions</button>`) :
+    last={text,place,mt,probs,hits:top.map(m=>({r:{id:m.h.id,year:m.h.year,place:m.h.place,mine_type:m.h.mine_type,mineral:m.h.mineral,cause_group:m.h.xcat,cause_subgroup:m.h.cause_label,situation:m.h.situation||("Cause label only: "+m.h.cause_label),measures:(m.h.findings||[]).join(" | "),regulations:m.h.regulations||"none recorded"}})),unclear,xcat:xa.cls.top.cat};
+    const histBlock = xa.hist.matches.length ? listBlock("hx","Historical explosion records (DGMS SANKET)", (xa.hist.unknownPlace?`<p class="partial">${xa.hist.unknownPlace} more SANKET record${xa.hist.unknownPlace===1?"":"s"} of this category ${xa.hist.unknownPlace===1?"has":"have"} no recorded place of work and ${xa.hist.unknownPlace===1?"is":"are"} left out by the place filter. Set Place of work to Any to include ${xa.hist.unknownPlace===1?"it":"them"}.</p>`:"")+(xa.hist.nSame===0?`<p class="partial"><b>No historical DGMS record of the category “${esc(xa.cls.top.cat)}”.</b> The records below involve a related mechanism or share strong wording; they are context, not direct precedents.</p>`:"")+`<button type="button" class="linkbtn" id="allacc">Show all DGMS accidents, not only explosions</button>`) :
       `<div class="block"><div class="sec-h reveal"><h2>Historical explosion records</h2><span class="sub">None found</span></div>
-        <div class="empty card reveal">${icon("Explosives")}<div><p><b>No suitable historical explosion records under the current filters</b> (${esc(filtersText(place,mt))}). ${xa.hist.eligible===0?"None of the 31 DGMS explosion records fall under these filters.":`The DGMS data has ${xa.hist.eligible} explosion record${xa.hist.eligible===1?"":"s"} under these filters, but none match “${esc(xa.cls.top.cat)}” or your wording.`} Synthetic scenarios are listed separately below.</p>
+        <div class="empty card reveal">${icon("Explosives")}<div><p><b>No suitable historical explosion records under the current filters</b> (${esc(filtersText(place,mt))}). ${xa.hist.eligible===0?`None of the ${HREC.length} SANKET explosion records fall under these filters.${xa.hist.unknownPlace?` ${xa.hist.unknownPlace} record(s) of this category have no recorded place of work; set Place of work to Any to include them.`:""}`:`The DGMS data has ${xa.hist.eligible} explosion record${xa.hist.eligible===1?"":"s"} under these filters, but none match “${esc(xa.cls.top.cat)}” or your wording.`} Synthetic scenarios are listed separately below.</p>
         <div class="btns" style="margin-top:12px">${place||mt?`<button type="button" class="btn2" id="broaden">Search all places and mine types</button>`:""}<button type="button" class="btn2" id="allacc">Search all DGMS accidents</button></div></div></div></div>`;
     const synBlock = xa.syn.matches.length ? listBlock("sx","Synthetic training scenarios", `<p class="partial">Generated examples from ${esc(X.source)}. They are <b>not</b> DGMS accidents, did not happen, and are never counted as evidence. Place-of-work filters are not applied to them because their work-area context is broad.</p>`) :
       `<div class="block"><div class="sec-h reveal"><h2>Synthetic training scenarios</h2><span class="sub">None found</span></div><p class="partial">No synthetic scenario matches this description${mt?` for ${esc(mtLabel(mt))}`:""}.</p></div>`;
-    out.innerHTML = relaxedNote + hazardPanel(hz,probs,unclear,pct) + explosionPanel(xa,pct) + measuresHTMLBlock(top,mNote) + histBlock + synBlock;
-    if(xa.hist.matches.length) makePager("hx", xa.hist.matches, m=>caseHTML(m,xa.hist.qv,true), "historical explosion records", `(from ${xa.hist.eligible} explosion records ${place||mt?"in these filters":"in the DGMS data"})`);
+    out.innerHTML = relaxedNote + hazardPanel(hz,probs,unclear,pct) + explosionPanel(xa,pct) + xMeasuresBlock(xa.cls.top.cat, text, top, mt) + histBlock + synBlock;
+    if(xa.hist.matches.length) makePager("hx", xa.hist.matches, m=>xCaseHTML(m,xa.hist.qv), "historical explosion records", `(from ${xa.hist.eligible} SANKET explosion records ${place||mt?"in these filters":"(coal and non-coal)"})`);
     if(xa.syn.matches.length) makePager("sx", xa.syn.matches, synHTML, "synthetic scenarios", `(from ${xa.syn.eligible}${mt?` for ${mtLabel(mt)}`:""})`);
   } else {
     // ----- general mode (unchanged behaviour) -----

@@ -290,6 +290,7 @@ const PLAIN = [
   [/\b(?:water|pa+ni|ponds?|talab|sumps?|floods?|swim\w*|doob\w*|drown\w*)\b/, "water drowned pond sump"],
   [/\b(?:pumps?|pontoon)\b/, "pump pontoon water"],
   [/\b(?:underground|neeche|andar)\b/, "belowground underground gallery"],
+  [/\b(?:phones?|mobiles?|cell ?phones?|smart ?phones?|calls?|calling|texting|whatsapp)\b/, "mobile phone mobile telephone distraction"],
 ];
 const VOCAB = new Set([...D.clf.terms, ...D.ret.terms]);
 function stemFix(tok){ if(VOCAB.has(tok)) return tok; for(const suf of ["ing","ed","es","s","er"]){ if(tok.endsWith(suf)){ const b=tok.slice(0,-suf.length); if(VOCAB.has(b)) return b; if(VOCAB.has(b+"e")) return b+"e"; } } return tok; }
@@ -319,6 +320,7 @@ function shortSit(s){
 }
 // Group DGMS "Had..." findings from the matched accidents into plain-language points
 const THEMES = [
+  ["phone",    /mobile (?:phone|telephone)|cell ?phone/i, "Do not use a mobile phone while driving or near moving vehicles and machines, and keep phones out of areas where flammable gas may be present."],
   ["misfire",  /misfire|socket/i, "Before drilling, wash down and examine the rock for misfired holes and sockets. Never drill into or near an old hole."],
   ["shelter",  /shelter|danger zone|before (?:the )?firing|withdrawn .*blast|blast.*withdrawn|warning signal/i, "Before blasting, clear everyone out of the danger zone and make sure they are in proper shelter. Give the warning signal."],
   ["blaster",  /\bblasters?\b|shot ?firer|\bcharg(?:ing|ed)\b.*(?:hole|explosive)|\bexplosives?\b|detonat|stemm/i, "Only a trained, authorised blaster should handle, charge and fire explosives, following the blasting rules."],
@@ -489,9 +491,10 @@ function renderPage(scroll){
   if(scroll) $("acc-h").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
 }
 
+let unclearFlag=false;
 function noMatchHTML(place, mt, browse, eligible){
   const f=`<b>${esc(PLACE_LABEL[place]||place)}</b> · <b>${esc(mtLabel(mt))}</b>`;
-  return `<div class="empty card reveal">${icon("Other causes")}<div><p><b>No ${browse?"":"relevant "}records found for these filters.</b> Filters applied: ${f}. ${eligible===0?"The DGMS dataset has no accidents for this combination.":`None of the ${eligible} accidents in these filters share terms with your description or belong to the predicted hazard group.`}</p>
+  return `<div class="empty card reveal">${icon("Other causes")}<div><p><b>No ${browse?"":"relevant "}records found for these filters.</b> Filters applied: ${f}. ${eligible===0?"The DGMS dataset has no accidents for this combination.":`None of the ${eligible} accidents in these filters share terms with your description${unclearFlag?"":" or belong to the predicted hazard group"}.`}</p>
     ${place||mt?`<div class="btns" style="margin-top:12px"><button type="button" class="btn2" id="broaden">Search all places and mine types</button></div>`:""}</div></div>`;
 }
 
@@ -504,14 +507,32 @@ function run(opts={}){
 
   let probs=null, hz=null, res;
   if(browse){ res=browseAll(place,mt); }
-  else { const q=expand(text); probs=classify(q); hz=probs[0]; res=rankAll(q,place,mt,hz.hazard); }
+  let known=0, unclear=false;
+  if(!browse){ const q=expand(text); known=vectorize(q,CLF_IDX,D.clf.idf).size+vectorize(q,RET_IDX,D.ret.idf).size;
+    if(known===0){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>These words are not in the DGMS records.</b> The model could not recognise “${esc(text.slice(0,60))}”. Describe the activity, equipment or place, for example: drilling, truck, roof, conveyor, wire, water, phone.</p></div>`; last=null; return; }
+    probs=classify(q); hz=probs[0]; unclear=hz.p<0.2;
+    res=rankAll(q,place,mt,unclear?null:hz.hazard); }
+  unclearFlag=unclear;
   const top=res.matches.slice(0,PAGE);
-  view={matches:res.matches, eligible:res.eligible, page:0, qv:res.qv||null, hzName:hz&&hz.hazard, place, mt, relaxed:!!opts.relaxed, browse};
-  last={text,place,mt,probs,hits:top};
+  view={matches:res.matches, eligible:res.eligible, page:0, qv:res.qv||null, hzName:hz&&!unclear?hz.hazard:null, place, mt, relaxed:!!opts.relaxed, browse};
+  last={text,place,mt,probs,hits:top,unclear};
 
   const pct=p=>(p*100).toFixed(0);
   const relaxedNote=opts.relaxed?`<div class="notice reveal"><b>Broadened search.</b> Your filters (${esc(PLACE_LABEL[fromPlace]||fromPlace)} · ${esc(mtLabel(fromMt))}) returned no relevant records, so these results come from all places of work and mine types.</div>`:"";
-  const hazardHTML = browse ? `<div class="notice reveal"><b>Browsing ${res.eligible} record${res.eligible===1?"":"s"}</b> for ${esc(PLACE_LABEL[place]||place)} · ${esc(mtLabel(mt))}, newest first. Add a situation description to get the likely hazard, preventive measures and relevance ranking.</div>` : `
+  const unclearHTML = (!browse && unclear) ? `
+    <div class="hazard card reveal" role="group" aria-label="Hazard assessment">
+      <div class="hz-main">
+        <span class="label">Most likely hazard</span>
+        <div class="hz-title"><span class="hz-icon">${icon("Other causes")}</span><h2 class="hz-name">Hazard unclear</h2></div>
+        <div class="score"><span class="v">${pct(hz.p)}%</span><span class="k">highest classifier confidence</span><span class="badge lo"><i aria-hidden="true"></i>Weak match</span></div>
+        <p class="interp">Your description does not point clearly to one DGMS hazard group, so none is shown as the answer. The closest past accidents below are ranked by the words you used only. Add the activity, equipment and place (for example “using a mobile phone while walking on the haul road”) for a clearer result.</p>
+      </div>
+      <div class="alts">
+        <span class="label">Possible hazard groups</span>
+        ${probs.slice(0,4).map(c=>`<div class="bar"><span>${esc(c.hazard)}</span><span class="p">${pct(c.p)}%</span><div class="track"><div class="fill" data-w="${(c.p*100).toFixed(1)}"></div></div></div>`).join("")}
+      </div>
+    </div>` : "";
+  const hazardHTML = unclearHTML ? unclearHTML : browse ? `<div class="notice reveal"><b>Browsing ${res.eligible} record${res.eligible===1?"":"s"}</b> for ${esc(PLACE_LABEL[place]||place)} · ${esc(mtLabel(mt))}, newest first. Add a situation description to get the likely hazard, preventive measures and relevance ranking.</div>` : `
     <div class="hazard card reveal" role="group" aria-label="Hazard assessment">
       <div class="hz-main">
         <span class="label">Most likely hazard</span>
@@ -570,7 +591,7 @@ Regulations: ${r.regulations}`).join("\n\n");
 
 The miner's job: ${last.text}
 Place: ${last.place||"not stated"} | Mine type: ${last.mt||"not stated"}
-Likely hazard: ${last.probs[0].hazard}
+Likely hazard: ${last.unclear?"unclear (top guesses: "+last.probs.slice(0,3).map(p=>p.hazard).join(", ")+")":last.probs[0].hazard}
 
 The miner has ALREADY been shown these preventive measures:
 ${shown}

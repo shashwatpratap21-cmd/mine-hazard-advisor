@@ -543,6 +543,15 @@ function rankHistX(q, place, mt, cat){
   out.sort((a,b)=>b.score-a.score||(b.h.year||0)-(a.h.year||0));
   return {qv, eligible, unknownPlace, matches:out, nSame:out.filter(m=>m.same).length};
 }
+// Browse SANKET explosion records with filters only (no description): known place first, then records whose place DGMS did not record
+function browseX(place, mt){
+  const known=[], unknown=[];
+  HREC.forEach(h=>{ if(mt && h.mine_type!==mt) return; const pOk=hPlaceOk(h,place); if(pOk===false) return;
+    (pOk===null?unknown:known).push({h,sim:0,same:false,related:false,score:null,noPlace:pOk===null}); });
+  const byDate=(a,b)=>(b.h.year||0)-(a.h.year||0)||String(b.h.date).localeCompare(String(a.h.date));
+  known.sort(byDate); unknown.sort(byDate);
+  return {eligible:known.length+unknown.length, known:known.length, unknownPlace:unknown.length, matches:[...known,...unknown]};
+}
 function mechCounts(cat){ const c={coal:0,noncoal:0,narr:0,list:0}; HREC.forEach(h=>{ if(h.xcat!==cat) return; h.src.startsWith("Coal")?c.coal++:c.noncoal++; h.kind==="narrative"?c.narr++:c.list++; }); return c; }
 // Synthetic scenarios: separate index, ranked by text similarity + 0.10 for the same category, mine-type context only
 function synMineOk(ctx, mt){
@@ -616,18 +625,18 @@ function caseHTML({r,score,sim,same,related,xc}, qv, xmode){
     </article>`;
 }
 // ---------- SANKET explosion record card ----------
-function xCaseHTML({h,score,sim,same,related}, qv){
+function xCaseHTML({h,score,sim,same,related,noPlace}, qv){
   const fs=h.findings||[];
   const regs=[...new Set((h.regulations.match(/Reg \d+(?:\(\w+\))*|Sec(?:tion)? \d+(?:\(\w+\))*/g)||[]))].slice(0,4);
   const terms=qv&&h.kind==="narrative"?(()=>{ const i=HREC.indexOf(h), out=[]; for(const [j,w] of qv){ const x=HVEC[i].get(j); if(x) out.push([D.ret.terms[j],x*w]); } return out.sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]); })():[];
-  const why=[terms.length?"shared terms: "+terms.join(", "):"", same?"same explosion category as predicted (+0.15)":related?"related explosion mechanism (+0.08)":""].filter(Boolean).join(" · ")+` · score ${score.toFixed(2)}`;
+  const why=score===null?"Listed by date (no description entered)":[terms.length?"shared terms: "+terms.join(", "):"", same?"same explosion category as predicted (+0.15)":related?"related explosion mechanism (+0.08)":""].filter(Boolean).join(" · ")+` · score ${score.toFixed(2)}`;
   const isList=h.kind==="list";
   const page=`${esc(h.doc)}, PDF p.${esc(String(h.pdf_page??"—"))}${h.printed_page?` (printed p.${esc(String(h.printed_page))})`:""}${h.table?` · ${esc(h.table)}`:""}`;
   return `
     <article class="case card reveal">
       <div class="case-h"><span class="rid">${esc(h.id)}</span><h3 class="mine">${esc(titleCase(h.mine))}</h3><span class="yr">${esc(String(h.year??h.date))}</span>
         <span class="killed">${h.killed} killed${h.injured?` · ${h.injured} injured`:""}</span></div>
-      <div class="tags">${TAG_HIST}<span class="prov src">${esc(h.src)}</span><span class="prov cat">${esc(h.xcat)}</span>${isList?`<span class="prov pot">Cause label only</span>`:""}</div>
+      <div class="tags">${TAG_HIST}<span class="prov src">${esc(h.src)}</span><span class="prov cat">${esc(h.xcat)}</span>${isList?`<span class="prov pot">Cause label only</span>`:""}${noPlace?`<span class="prov pot">Place of work not recorded</span>`:""}</div>
       <p class="cause">Cause as recorded by DGMS: <b>“${esc(h.cause_label)}”</b>${h.dgms_id?` · DGMS record ${esc(h.dgms_id)}`:""}</p>
       ${isList?`<p class="partial">This accident appears only in SANKET's list of major accidents (four or more killed). The source gives no narrative and no inspector findings, so nothing beyond the cause label is established.</p>`
               :`<p class="sit">${esc(shortSit(h.situation))}</p>`}
@@ -863,7 +872,17 @@ function run(opts={}){
   const relaxedNote=opts.relaxed?`<div class="notice reveal"><b>Broadened search.</b> Your filters (${esc(filtersText(fromPlace,fromMt))}) returned no relevant historical records, so these results come from all places of work and mine types.</div>`:"";
   const allNote=opts.noExplosion?`<div class="notice reveal"><b>All DGMS accidents.</b> Explosion analysis is switched off for this search, so results include every relevant accident type, not only explosions.</div>`:"";
 
-  if(xa){
+  if(browse && X && !opts.noExplosion){
+    // ----- browse SANKET explosion records (filters only) -----
+    const res=browseX(place,mt);
+    last=null;
+    const head=`<div class="notice reveal"><b>Browsing ${res.eligible} SANKET explosion record${res.eligible===1?"":"s"}</b> for ${esc(filtersText(place,mt))}, newest first.${place&&res.unknownPlace?` ${res.known} ha${res.known===1?"s":"ve"} this place of work recorded; the other ${res.unknownPlace} ${res.unknownPlace===1?"is an":"are"} ${mt?esc(mtLabel(mt).toLowerCase())+"-mine ":""}explosion${res.unknownPlace===1?"":"s"} whose place DGMS did not record, listed after them.`:""} Describe the job to get the explosion category and preventive measures.</div>`;
+    out.innerHTML = relaxedNote + head + (res.matches.length
+      ? listBlock("hx","Historical explosion records (DGMS SANKET)",`<button type="button" class="linkbtn" id="allacc">Show all DGMS accidents, not only explosions</button>`)
+      : `<div class="empty card reveal">${icon("Explosives")}<div><p><b>No SANKET explosion records for these filters</b> (${esc(filtersText(place,mt))}).</p>
+          <div class="btns" style="margin-top:12px">${place||mt?`<button type="button" class="btn2" id="broaden">Search all places and mine types</button>`:""}<button type="button" class="btn2" id="allacc">Show all DGMS accidents</button></div></div></div>`);
+    if(res.matches.length) makePager("hx", res.matches, m=>xCaseHTML(m,null), "explosion records", "");
+  } else if(xa){
     // ----- explosion mode -----
     const top=xa.hist.matches.slice(0,PAGE);
     last={text,place,mt,probs,hits:top.map(m=>({r:{id:m.h.id,year:m.h.year,place:m.h.place,mine_type:m.h.mine_type,mineral:m.h.mineral,cause_group:m.h.xcat,cause_subgroup:m.h.cause_label,situation:m.h.situation||("Cause label only: "+m.h.cause_label),measures:(m.h.findings||[]).join(" | "),regulations:m.h.regulations||"none recorded"}})),unclear,xcat:xa.cls.top.cat};

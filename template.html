@@ -1370,11 +1370,10 @@ function msProfile(m, others){
     const cg=new Map(); m.other.forEach(o=>cg.set(o.cause,(cg.get(o.cause)||0)+1));
     body+=`<div class="empty card reveal">${icon("Other causes")}<div><p><b>No explosion-related record for this mine in the available datasets.</b> ${m.other.length?`The DGMS SANKET narratives (2016–2022) record ${m.other.length} other fatal accident${m.other.length===1?"":"s"} here (${[...cg.entries()].map(([k,n])=>`${esc(k)} ${n}`).join(", ")}); they are not explosions and are not shown as explosion evidence.`:""}</p></div></div>`;
   } else {
-    body+=`<div class="empty card reveal">${icon("Other causes")}<div><p><b>No historical accident record for this mine in the available datasets</b> (SANKET coal and non-coal records, 1901–2022). It appears only in a reference book; what the book contains is listed below.</p></div></div>`;
+    body+=`<div class="empty card reveal">${icon("Other causes")}<div><p><b>No historical accident record for this mine in the available datasets</b> (SANKET coal and non-coal records, 1901–2022). It is named only in ${[...new Set(m.book.map(b=>b.book))].map(bk=>`${bk==="Ramlu"?"Ramlu, Mine Disasters and Mine Rescue":"Cheng, Explosions in Underground Coal Mines"}, printed p. ${[...new Set(m.book.filter(b=>b.book===bk).map(b=>b.printed_page+(b.page_exact?"":" (approx.)")))].join(", ")}`).join("; ")}.</p></div></div>`;
   }
   if(m.excluded.length) body+=`<div class="block reveal"><div class="sec-h"><h2>Reviewed but not counted as explosions</h2></div>
     ${m.excluded.map(e=>`<div class="bk"><b>${esc(e.id)} · ${esc(e.date)}</b><span>Cause as recorded: “${esc(e.cause_label)}” · ${e.killed??NA} killed · SANKET workbook category: ${esc(e.category)}</span><span>Reason given in the workbook: ${esc(e.reason||NA)}</span></div>`).join("")}</div>`;
-  body+=msBooks(m,H);
   out.innerHTML=head+body;
   if(H.length) makePager("mx",H.map(h=>({h,score:null})),x=>xCaseHTML(x,null),"records","");
   out.querySelectorAll(".mo").forEach(b=>b.onclick=()=>msProfile(MBY[b.dataset.k],[]));

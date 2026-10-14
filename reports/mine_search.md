@@ -54,7 +54,7 @@ These runs were executed in headless Chromium against the built page.
 | Records in more than one source, with a duplicate | "Ramagundam" → OC-I | EXP-09 (narrative), its duplicate listing C-HIST-283 (alias, counted once: "1 duplicate listing merged"), 1 other non-explosion DGMS accident (stated, not counted), and a Ramlu page mentioning Ramagundam collieries (name match only). |
 | Duplicate across files | "C. Kasturi Bai Barytes" | NC-17 counted once; the duplicate N-HIST-104 is merged. |
 | Incomplete casualty data | "Dahra Pathar Khadan" | NC-12: Seriously injured "Not available in source (1 record without a figure)"; the table marks it "—*" and does not count it as zero. |
-| Book only | "Darby" → Darby Mine | No historical record in the datasets; Cheng printed pp. 8, 9, 10, 13, 205, with year 2006 printed beside the name on pp. 9–13. "Darby No.1 Coal Mine" is offered separately. |
+| Book only | "Darby" → Darby Mine | No historical record in the datasets; the message names the book and its pages (Cheng, printed pp. 8, 9, 10, 13, 205). "Darby No.1 Coal Mine" is offered separately. |
 | Book and dataset cross-check | "Dhori" | C-HIST-191 (1965 coal-dust explosion, 268 killed). Ramlu names "Dhori Colliery", printed p. 88–89 (approximate); the year printed beside it, 1965, matches the record. |
 | In the data, but no explosion record | "Chasnalla", "Bangwar U/G Project" | "No explosion-related record for this mine", with the count of other DGMS accidents by cause group; no unrelated accident is shown as evidence. Chasnalla is also mentioned in Ramlu (1975, printed p. 366–367, approximate). |
 | Misspelled | "Kurasiya" | Possible spelling match: Kurasia Colliery. |
@@ -105,3 +105,7 @@ Records and candidate mines both use the existing six-per-page pager with Next a
   - Ramlu page numbers are read from scanned headers and are marked approximate where a page has no readable header.
   - OCR noise may hide some names in Ramlu.
 - **Preventive measures:** mine-specific measures exist only where DGMS printed enquiry findings, which applies to the 2016–2022 narratives. For older mines the page shows general book guidance for the documented mechanism, clearly labelled as not about that mine. Where the mechanism is unrecorded, no measure is offered.
+
+## Update, 14 October 2026
+
+The "Reference books" section at the bottom of each mine profile has been removed at the user's request. Book name-matching is still used: for a mine named only in a book, the search result names the book and its printed pages in one line. The "Dhori 1965" and "Chasnalla" book cross-references described above are no longer displayed on the profile.

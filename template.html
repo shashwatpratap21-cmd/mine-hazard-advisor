@@ -313,7 +313,8 @@ header{justify-content:flex-start}
 .ex-field{gap:10px}
 .ex-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .ex-title{font:700 .95rem/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2)}
-.ex-help{font-size:.82rem;color:var(--text-3)}
+.ex-help{margin:-4px 0 2px;font-size:.84rem;line-height:1.4;color:var(--text-3)}
+.ex-help.filled{color:#D9C08A}
 #ex .chip,#exMore .chip{height:56px;display:flex;align-items:center;white-space:normal;overflow:hidden;line-height:1.3;padding:8px 12px;font-size:.88rem;color:#B9C4CC}
 #ex .chip:hover,#exMore .chip:hover{color:var(--text)}
 #ex .chip[aria-pressed="true"],#exMore .chip[aria-pressed="true"]{color:var(--text)}
@@ -354,7 +355,8 @@ form .field>.label{color:var(--text-2)}
         <select id="mt"><option value="">Any</option></select></div>
     </div>
     <div class="field ex-field">
-      <div class="ex-h"><span class="ex-title" id="exl">Quick examples</span><span class="ex-help">Select to autofill</span></div>
+      <div class="ex-h"><span class="ex-title" id="exl">Quick examples</span></div>
+      <p class="ex-help" id="exHelp" aria-live="polite">Select an example to fill the situation, then click Find Precedents to analyse it.</p>
       <div class="chips" id="ex" role="group" aria-labelledby="exl"></div>
       <div class="chips" id="exMore" role="group" aria-label="More examples" hidden></div>
       <button type="button" class="ex-toggle" id="exToggle" aria-expanded="false" aria-controls="exMore">View all examples</button>
@@ -570,18 +572,20 @@ for(const m of D.mine_types) $("mt").add(new Option(m.replace(/ \(DGMS.*\)/,""),
 // Input suggestions only (not accident evidence). [short title, full situation, place filter, mine-type filter, quick?]
 // Filters are set only where the situation itself states them; selecting an example fills the form but does not run it.
 const EXAMPLES = [
-  ["Methane accumulation in an underground coal working","Auxiliary fan has stopped and methane is accumulating at the face of an underground development heading","","Coal",1],
-  ["Coal dust dispersed along underground mine roadways","Dry coal dust has collected along the underground belt conveyor roadway and no stone dust has been spread","","Coal",1],
-  ["Drilling near a suspected misfired blast hole","Drilling into a split gallery of a depillaring panel where a misfired shot hole may remain","","Coal",1],
-  ["Combustible dust in a metal-ore processing plant","Fine combustible dust accumulates inside a metal-ore processing plant's dust collection system near a potential ignition source","","Metal ore",1],
+  ["Methane accumulation in an underground coal working","An underground coal mine development heading experiences an auxiliary ventilation fan failure, allowing methane to accumulate near the working face and creating a potential firedamp explosion hazard.","Below Ground","Coal",1],
+  ["Coal dust dispersed along underground mine roadways","Dry coal dust accumulates along underground coal mine roadways and is dispersed into the air during coal transport, creating conditions for a potential coal-dust explosion.","Below Ground","Coal",1],
+  ["Drilling near a suspected misfired blast hole","A drilling crew approaches a previously blasted face in an underground coal or metal mine where a misfired explosive charge may remain, creating a risk of accidental detonation.","Below Ground","",1],
+  ["Combustible dust in a metal-ore processing plant","Fine combustible dust accumulates around equipment in a metal-ore processing plant where an ignition source may be present, creating a potential dust-fire or explosion hazard.","","Metal ore",1],
   ["Drilling near an old blasted area in a granite quarry","Drilling holes on a bench near an old blasted area in an opencast granite quarry","Opencast","",0],
-  ["Welding near a sealed fire area with possible firedamp","Welding a pipeline underground near a sealed-off fire area where firedamp may be present","","Coal",0],
+  ["Welding near a sealed fire area with possible firedamp","Welding a pipeline underground near a sealed-off fire area where firedamp may be present","Below Ground","Coal",0],
   ["Gas testing before blasting in a gassy seam","Gas testing before blasting in a degree III gassy seam","","Coal",0]
 ];
+const EX_HELP=["Select an example to fill the situation, then click Find Precedents to analyse it.","Situation filled. Review the details and click Find Precedents to analyse."];
+function exHelp(filled){ const h=$("exHelp"); h.textContent=EX_HELP[filled?1:0]; h.classList.toggle("filled",!!filled); }
 function setPressed(btn){ document.querySelectorAll("#ex .chip, #exMore .chip").forEach(c=>c.setAttribute("aria-pressed", c===btn?"true":"false")); }
 EXAMPLES.forEach(([title,t,p,m,quick])=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("aria-pressed","false");
   b.textContent=title; b.title=t;
-  b.onclick=()=>{ $("q").value=t; $("place").value=p; $("mt").value=m; setPressed(b); $("q").focus({preventScroll:true}); };
+  b.onclick=()=>{ $("q").value=t; $("place").value=p; $("mt").value=m; setPressed(b); exHelp(true); $("q").focus({preventScroll:true}); };
   $(quick?"ex":"exMore").append(b); });
 // editing the text away from the selected example clears the selection
 $("q").addEventListener("input",()=>{ const sel=document.querySelector("#ex .chip[aria-pressed=true], #exMore .chip[aria-pressed=true]"); if(sel&&sel.title!==$("q").value) setPressed(null); });
@@ -1446,7 +1450,7 @@ function resetAdvisor(){
   try{ ctl?.abort(); }catch{}                                            // stop a running "More recommendations" request
   const btn=$("go"); btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents";
   $("q").value=""; $("place").value=""; $("mt").value="";
-  setPressed(null);
+  setPressed(null); exHelp(false);
   last=null; for(const k of ["hx","sx","acc"]) delete PAGERS[k];
   idle();
   setView("advisor");

@@ -47,7 +47,7 @@ STRONG = {
     "methane / firedamp": r"\b(?:methane|firedamp|fire damp|inflammable gas|flammable gas|gassy|ch4)\b",
     "coal dust": r"\bcoal[- ]dust\b|\bstone[- ]dust",
     "dust cloud / deposits": r"\bdust (?:cloud|explosion|deposits?|layer)\b",
-    "explosives / blasting": r"\b(?:explosives?|blast(?:ing|ed|s)?|detonat\w*|detonators?|misfire\w*|sockets?|charged holes?|shot ?fir\w*|shot holes?|fly ?rock|blasters?|barood|visphot)\b",
+    "explosives / blasting": r"\b(?:explosives|explosive(?! (?:gas|gases|atmospheres?|mixtures?|range|limits?|dust|concentrations?|conditions|methane))|blast(?:ing|ed|s)?|detonat\w*|detonators?|misfire\w*|sockets?|charged holes?|shot ?fir\w*|shot holes?|fly ?rock|blasters?|barood|visphot)\b",
     "explosive / flammable atmosphere": r"\b(?:explosive|flammable|inflammable|combustible) (?:\w+ )?(?:atmosphere|mixture|range|gas\w*)\b|\bgas (?:accumulat\w*|build-?up|release|outburst)|\b(?:accumulat\w*|build-?up of) (?:of )?gas|\boutburst\b",
     "combustible dust": r"\b(?:combustible|explosive|flammable|inflammable|sulphide|sulfide|pyrit\w*|pyrrhotite|sulphur|sulfur|alumin(?:i)?um|magnesium)(?:[- ]\w+)?[- ]dust\b",
     "spontaneous heating": r"\bspontaneous(?:ly)? (?:heating|combustion)\b|\bself[- ]heat\w*",
@@ -61,6 +61,10 @@ WEAK = {
     "dust": r"\bdust\b",
 }
 ATMOSPHERE = {"gas / ventilation", "dust"}
+# An event word preceded by hedging ("a potential firedamp explosion hazard", "conditions for a secondary explosion")
+# or followed by "hazard"/"risk" describes a possibility, not an explosion that happened.
+HEDGE_BEFORE = r"(?:potential|possible|possibility of|risk of|risks of|hazard of|danger of|chance of|likelihood of|conditions for|could|may|might|can|prevent|preventing|avoid|avoiding|cause an?|lead to|leading to|result in|without)\W+(?:\w+\W+){0,3}$"
+HEDGE_AFTER = r"^\W*(?:hazard|hazards|risk|risks|potential)\b"
 EVENT = r"\b(?:explodes|exploded|explosion occurs|an explosion|explosion follows|ignites|ignited|is ignited|detonate|detonates|detonated|detonation|propagates|triggers|initiates|burst|blew)\b|\b(?:initial|secondary|primary|methane|gas|dust|firedamp|coal-dust) explosion\b|\bexplosion (?:disperses|spreads|follows|propagates)\b"
 
 SUBJECT_AREAS = {  # general subject areas from the project brief; shown as NOT evidence-backed
@@ -81,6 +85,16 @@ def fail(msg):
 EXPLOSIVE_GROUPS = {"Explosives", "Gas, dust & other combustible material"}
 
 
+def is_event(text):
+    """True when the text reports an explosion/ignition that happened (an EVENT match that is not hedged)."""
+    t = text.lower()
+    for m in re.finditer(EVENT, t):
+        if re.search(HEDGE_BEFORE, t[max(0, m.start() - 60):m.start()]) or re.search(HEDGE_AFTER, t[m.end():m.end() + 20]):
+            continue
+        return True
+    return False
+
+
 def evidence(text, dgms_hazard=None):
     """Explosion relevance. 'Blasting' alone is common in roof/side-fall reports ("after blasting..."),
     so when it is the only strong signal we also require an explosion/ignition event in the text or
@@ -89,7 +103,7 @@ def evidence(text, dgms_hazard=None):
     strong = [k for k, p in STRONG.items() if re.search(p, t)]
     weak = [k for k, p in WEAK.items() if re.search(p, t)]
     other_strong = [k for k in strong if k != "explosives / blasting"]
-    blasting_ok = "explosives / blasting" in strong and (bool(re.search(EVENT, t)) or "ignition source" in weak or dgms_hazard in EXPLOSIVE_GROUPS)
+    blasting_ok = "explosives / blasting" in strong and (is_event(t) or "ignition source" in weak or dgms_hazard in EXPLOSIVE_GROUPS)
     atmosphere = len(set(weak) & ATMOSPHERE) >= 1 and len(set(weak) - ATMOSPHERE) >= 1
     relevant = bool(other_strong) or blasting_ok or atmosphere
     return relevant, strong, weak
@@ -186,7 +200,7 @@ def main():
         for _, r in summary.iterrows():
             if int(cnt.get(r["Primary_Explosion_Category"], 0)) != int(r["Scenario_Count"]):
                 fail(f"Category_Summary count mismatch for {r['Primary_Explosion_Category']}")
-    syn["is_event"] = syn["Situation_Text"].str.contains(EVENT, case=False, regex=True)
+    syn["is_event"] = syn["Situation_Text"].map(is_event)
     mt_ctx = syn.groupby("Primary_Explosion_Category")["Mine_Type_Context"].agg(lambda s: sorted(set(s)))
     log.append(f"Imported {len(syn)} synthetic scenarios from {wb.name}; IDs unique; {dup_text} duplicate texts; categories match Category_Summary.")
     log.append(f"All rows marked synthetic and Historical_DGMS_Record = No. No source values were changed.")
@@ -352,7 +366,7 @@ def main():
         "taxonomy": TAXONOMY,
         "subject_areas": SUBJECT_AREAS,
         "coal_only": [TAXONOMY[0], TAXONOMY[1], TAXONOMY[2]],
-        "lexicon": {"strong": STRONG, "weak": WEAK, "atmosphere": sorted(ATMOSPHERE), "event": EVENT, "explosive_groups": sorted(EXPLOSIVE_GROUPS)},
+        "lexicon": {"strong": STRONG, "weak": WEAK, "atmosphere": sorted(ATMOSPHERE), "event": EVENT, "hedge_before": HEDGE_BEFORE, "hedge_after": HEDGE_AFTER, "explosive_groups": sorted(EXPLOSIVE_GROUPS)},
         "clf": xclf,
         "syn_index": {"terms": sorted(svec.vocabulary_, key=svec.vocabulary_.get), "idf": [round(float(x), 4) for x in svec.idf_], "docs": sdocs},
         "syn": [[r.Scenario_ID, r.Situation_Text, r.Primary_Explosion_Category, r.Mine_Type_Context, r.Place_of_Work_Context, bool(r.is_event)] for r in syn.itertuples()],

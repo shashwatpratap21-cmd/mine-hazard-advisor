@@ -39,7 +39,7 @@ The 87 SANKET explosion records fall under Blasting (42), Methane / Firedamp (22
 
 ## Models and evaluation
 
-See [`reports/explosion_evaluation.md`](reports/explosion_evaluation.md) for every number and the full source/guidance tables, and [`reports/explosion_validation.md`](reports/explosion_validation.md) for the 10-case validation run.
+The 25-situation validation (inputs, actual outputs, source checks and fixes) is in [`reports/validation_25.md`](reports/validation_25.md) with the full table in [`reports/validation_25.csv`](reports/validation_25.csv). See [`reports/explosion_evaluation.md`](reports/explosion_evaluation.md) for every number and the full source/guidance tables, and [`reports/explosion_validation.md`](reports/explosion_validation.md) for the 10-case validation run.
 
 - DGMS hazard classifier: 70.5% accuracy / 0.62 macro-F1 on unseen 2021–22 accidents (23% majority baseline).
 - Explosion-category classifier: trained on 200 synthetic + 29 historical SANKET narratives; synthetic-only 5-fold CV accuracy 0.685, macro-F1 0.662; synthetic-only model on the 29 real narratives 86.2% (out-of-domain, essentially one class). In the page, a metal-mine description that names explosives or blasting and no gas or dust is shown as Blasting (SANKET's convention) even when the classifier's top class is Metal Mine; the panel says when this happens.

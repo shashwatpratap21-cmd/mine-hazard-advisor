@@ -385,7 +385,7 @@ function search(text, {k=6, place="", mineType="", hazard=null, boost=0.1}={}){
 const PLAIN = [
   [/\b(?:blast\w*|shot ?fir\w*|explosives?|barood|baarood|visphot|dhamaka|blasting)\b/, "blasting explosives shot holes charged holes detonator blaster shelter danger zone"],
   [/\b(?:drill\w*|jack ?hammer|chhed|ched)\b/, "drilling holes jack hammer drill misfire socket charged hole"],
-  [/\b(?:misfire\w*|sockets?)\b/, "misfire socket charged hole drilling"],
+  [/\b(?:misfire\w*|sockets?|un-?exploded|previously charged|explosive remnants?)\b|\b(?:old|previous) (?:charged |blast |shot ?)?holes?\b/, "misfire socket charged hole drilling"],
   [/\b(?:trucks?|lorr(?:y|ies)|dumpers?|tippers?|haulers?|hywa|hyva|vehicles?|ga+di|ga+ri)\b/, "tipper dumper truck haul road driver vehicle"],
   [/\b(?:driv\w*|chala\w*)\b/, "driver tipper dumper vehicle haul road"],
   [/\b(?:roads?|sa?dak|rasta)\b/, "haul road tipper dumper"],
@@ -444,7 +444,7 @@ function shortSit(s){
 const THEMES = [
   ["phone",    /mobile (?:phone|telephone)|cell ?phone/i, "Do not use a mobile phone while driving or near moving vehicles and machines, and keep phones out of areas where flammable gas may be present."],
   ["lightning", /lightning|thunder|electric storm|approach of (?:a|an) (?:electric )?storm/i, "When a storm approaches, coil up and cover all naked or exposed detonator lead wires so they cannot pick up a charge."],
-  ["misfire",  /misfire|socket/i, "Before drilling, wash down and examine the rock for misfired holes and sockets. Never drill into or near an old hole."],
+  ["misfire",  /misfire|socket|un-?exploded|old (?:charged |blast |shot ?)?holes?|previously charged|previous (?:blast |shot ?)holes?|explosive remnant/i, "Before drilling, wash down and examine the rock for misfired holes and sockets. Never drill into or near an old hole."],
   ["circuit",  /blasting cable|firing cable|shot-?firing apparatus|insulated (?:cable|leads)|detonating leads|circuit been tested|test(?:ed|ing)? (?:the )?(?:blasting )?circuit|continuity|electrical resistance|coupled up the cable/i, "Use a well-insulated firing cable of sufficient length and detonators with adequate leads; only the blaster connects the circuit, tests it for resistance or continuity, and fires from shelter."],
   ["shelter",  /shelter|danger zone|before (?:the )?firing|withdrawn .*blast|blast.*withdrawn|warning signal/i, "Before blasting, clear everyone out of the danger zone and make sure they are in proper shelter. Give the warning signal."],
   ["blaster",  /\bblasters?\b|shot ?firer|\bcharg(?:ing|ed)\b.*(?:hole|explosive)|\bexplosives?\b|detonat|stemm/i, "Only a trained, authorised blaster should handle, charge and fire explosives, following the blasting rules."],
@@ -571,15 +571,24 @@ if(X){
   XCLF_IDX=index(X.clf.terms); SYN_IDX=index(X.syn_index.terms);
   SYN_DOCS=X.syn_index.docs.map(([ix,vals])=>{ const m=new Map(); ix.forEach((j,i)=>m.set(j,vals[i])); return m; });
   const rx=o=>Object.fromEntries(Object.entries(o).map(([k,p])=>[k,new RegExp(p,"i")]));
-  LEX={strong:rx(X.lexicon.strong), weak:rx(X.lexicon.weak), atmo:new Set(X.lexicon.atmosphere), event:new RegExp(X.lexicon.event,"i"), groups:new Set(X.lexicon.explosive_groups)};
+  LEX={strong:rx(X.lexicon.strong), weak:rx(X.lexicon.weak), atmo:new Set(X.lexicon.atmosphere), event:new RegExp(X.lexicon.event,"gi"), hedgeB:new RegExp(X.lexicon.hedge_before,"i"), hedgeA:new RegExp(X.lexicon.hedge_after,"i"), groups:new Set(X.lexicon.explosive_groups)};
 }
-// same rule as build_explosion.py evidence()
+// same rules as build_explosion.py is_event() and evidence()
+function isEvent(text){
+  const t=text.toLowerCase(); LEX.event.lastIndex=0; let m;
+  while((m=LEX.event.exec(t))){
+    if(m[0].length===0){ LEX.event.lastIndex++; continue; }
+    if(LEX.hedgeB.test(t.slice(Math.max(0,m.index-60),m.index))||LEX.hedgeA.test(t.slice(m.index+m[0].length,m.index+m[0].length+20))) continue;
+    return true;
+  }
+  return false;
+}
 function xEvidence(text, dgmsHazard){ return Object.assign(xEvidence0(text, dgmsHazard),{text}); }
 function xEvidence0(text, dgmsHazard){
   const strong=Object.keys(LEX.strong).filter(k=>LEX.strong[k].test(text));
   const weak=Object.keys(LEX.weak).filter(k=>LEX.weak[k].test(text));
   const other=strong.filter(k=>k!=="explosives / blasting");
-  const event=LEX.event.test(text);
+  const event=isEvent(text);
   const blastingOk=strong.includes("explosives / blasting")&&(event||weak.includes("ignition source")||LEX.groups.has(dgmsHazard));
   const atmo=weak.some(k=>LEX.atmo.has(k))&&weak.some(k=>!LEX.atmo.has(k));
   return {relevant:other.length>0||blastingOk||atmo, strong, weak, event};
@@ -663,7 +672,10 @@ function rankHistX(q, place, mt, cat, ev){
     // the metal-mine class is a catch-all, so a record of that class must also share wording with the description
     const same=h.xcat===cat&&(cat!==METAL||!ev||sim>0), related=h.xcat!==cat&&rel.includes(h.xcat);
     const close=cl.includes(h.xcat);
-    if(same||(related&&(sim>=0.03||(close&&h.kind==="list")))||(sim>=0.15&&h.kind==="narrative")) out.push({h,sim,same,related,score:sim+(same?0.15:related?0.08:0)});
+    // a label-only list row is a single cause label, so its cosine is inflated; cap it for ranking so it cannot outrank
+    // a narrative with findings on one shared word. Wording alone admits only narratives with a clear match.
+    const rs=h.kind==="list"?Math.min(sim,0.1):sim;
+    if(same||(related&&(sim>=0.03||(close&&h.kind==="list")))||(sim>=0.25&&h.kind==="narrative")) out.push({h,sim,same,related,score:rs+(same?0.15:related?0.08:0)-(/type not recorded/.test(h.xcat)?0.02:0)});
   });
   out.sort((a,b)=>b.score-a.score||(b.h.year||0)-(a.h.year||0));
   return {qv, eligible, unknownPlace, matches:out, nSame:out.filter(m=>m.same).length};
@@ -828,16 +840,42 @@ function guidanceCard(g, i, cat, topIds){
         <p class="interp">The measure text is a summary written for this app, not a quotation from either book or from DGMS.</p>
       </div></details></li>`;
 }
-function xMeasuresBlock(cat, text, top, mt){
-  const topIds=new Set(top.map(m=>m.h.id));
-  const gs=pickGuidance(cat, text, topIds, mt), shownG=new Set(gs.map(g=>g.id));
+// The runner-up class also supplies guidance when the classifier is undecided, except a coal-dust class when nothing
+// in the description or mine type says coal (combustible dust is not assumed to be coal dust).
+function secondClass(cls, text, mt){
+  if(!cls.ambiguous) return null;
+  const c=cls.probs.find(x=>x.cat!==cls.top.cat).cat;
+  if(/^(?:Coal-Dust|Combined)/.test(c) && !(/\bcoal\b/i.test(text)||mt==="Coal")) return null;
+  return c;
+}
+function xMeasuresBlock(cat, text, top, mt, cat2){
+  const topIds=new Set(top.map(m=>m.h.id)), cats=cat2?[cat,cat2]:[cat];
+  // when the classifier cannot decide between two mechanisms, guidance for both is considered
+  const gs=[...new Map([...pickGuidance(cat, text, topIds, mt),...(cat2?pickGuidance(cat2, text, topIds, mt):[])].map(g=>[g.id,g])).values()], shownG=new Set(gs.map(g=>g.id));
+  const HC=Object.fromEntries(HREC.map(h=>[h.id,h.xcat]));
   // DGMS finding themes from the closest historical records that the book measures do not already cover
   const narr=top.filter(m=>m.h.findings&&m.h.findings.length).map(m=>({r:{id:m.h.id,measures:m.h.findings.join(" | ")},score:m.score}));
   const tms=narr.length?topMeasures(narr):[];
-  const dgmsOnly=tms.filter(m=>{ const k=(THEMES.find(([k,,t])=>t===m.text)||[])[0]; return !(THEME_TO_G[k]||[]).some(id=>shownG.has(id)); });
+  // situation-specific DGMS themes are shown only when the description mentions their situation
+  const TRIGGER={lightning:/lightning|thunder|storm|rain/i, phone:/phone|mobile|radio/i};
+  const dgmsOnly=tms.filter(m=>{ const k=(THEMES.find(([k,,t])=>t===m.text)||[])[0]; return !(THEME_TO_G[k]||[]).some(id=>shownG.has(id)) && (!TRIGGER[k]||TRIGGER[k].test(text)); });
   // one list, ordered by how many of the matched historical accidents support each measure (book measures first on ties)
+  // Tier 0: book measures for the predicted mechanism that match the description or the matched accidents, and DGMS
+  // findings from matched accidents of the same mechanism. Tier 1: everything else (related mechanisms, other records).
+  const kwOk=g=>g.keywords&&new RegExp(g.keywords,"i").test(text);
+  // within a tier: words of the description matched (distinct), then matched accidents supporting it, then the top class
+  const kwHits=g=>g.keywords?new Set([...text.toLowerCase().matchAll(new RegExp(g.keywords,"gi"))].map(m=>m[0])).size:0;
+  // a theme's finding pattern can contain everyday words ("stopped"); for matching the user's description some themes
+  // need a stricter pattern that names the measure itself
+  const DESC_RE={isolate:/isolat|lock(?:ed|ing)? ?out|permit to work|de-?energi/i};
+  const themeRe=Object.fromEntries(THEMES.map(([k,re,t])=>[t,DESC_RE[k]||re]));
+  // support from matched accidents is capped so a widely cited generic finding cannot outrank one that matches the description
+  const rel=it=>it.kind==="g"? 1.5*kwHits(it.g)+0.75*Math.min(it.here,2)+(it.g.mechanisms.includes(cat)?0.5:0)
+                            : (themeRe[it.m.text]&&themeRe[it.m.text].test(text)?3:0)+0.75*Math.min(it.here,2)+(it.m.ids.some(id=>HC[id]===cat)?0.5:0);
+  const tier=it=>it.kind==="g"? (g=>g.mechanisms.some(x=>cats.includes(x))&&(kwOk(g)||it.here>0)?0:1)(it.g) : (it.m.ids.some(id=>cats.includes(HC[id]))?0:1);
   const items=[...gs.map(g=>({kind:"g",g,here:g.links.filter(l=>topIds.has(l[0])).length})),...dgmsOnly.map(m=>({kind:"d",m,here:m.ids.length}))]
-    .sort((a,b)=>b.here-a.here||(a.kind==="g"?-1:1)-(b.kind==="g"?-1:1));
+    .map(it=>({...it,tier:tier(it),rel:rel(it)}))
+    .sort((a,b)=>a.tier-b.tier||b.rel-a.rel||(a.kind==="g"?-1:1)-(b.kind==="g"?-1:1));
   const html=items.map((it,i)=>it.kind==="g"?guidanceCard(it.g,i,cat,topIds):dgmsCard(it.m,i)).join("");
   const gHTML=html, dHTML="";
   function dgmsCard(m,i){ return `<li class="act card"><span class="num" aria-hidden="true">${i+1}</span><div class="t">${esc(m.text)}
@@ -940,7 +978,9 @@ function explosionPanel(xa, pct){
         <div class="xp-main">
           <h2 class="xp-cat">${cls.ambiguous?`Ambiguous: ${esc(t.cat)} or ${esc(cls.probs[1].cat)}`:esc(t.cat)}</h2>
           <div class="score"><span class="v">${pct(t.p)}%</span><span class="k">explosion-category confidence</span><span class="badge ${cls.ambiguous?"lo":confClass(t.p)}"><i aria-hidden="true"></i>${cls.ambiguous?"Uncertain":interp(t.p)}</span></div>
-          <p class="interp">From a classifier trained on ${X.metrics.n_train} examples: ${X.syn.length} synthetic scenarios (labels not yet expert-validated) and ${X.metrics.n_train-X.syn.length} historical DGMS explosion narratives. It says which explosion mechanism your description resembles, not the chance of an explosion.${coalOnly?` <b>Note:</b> this category was defined for coal mines, but the mine context is metal / non-coal. Check the description.`:""}${cls.dustRule?` The classifier's top label was “${esc(cls.probs[0].cat)}”, but your description names a non-coal combustible dust and does not mention coal, so the coal-dust classes are not supported; it is shown as the non-coal mechanism.`:""}${(cls.ambiguous||text.trim().split(/\s+/).length<5)?` <b>Not enough detail to settle the mechanism.</b> Say what the dust or gas is, where it is (mine type, plant or underground working) and any ignition source.`:""}${cls.metalRule?` The classifier's top label was “${esc(cls.probs[0].cat)}”; because your description names explosives or blasting and no gas or dust, it is shown as blasting, the category SANKET uses for explosives accidents in non-coal mines.`:""}</p>
+          <p class="interp">From a classifier trained on ${X.metrics.n_train} examples: ${X.syn.length} synthetic scenarios (labels not yet expert-validated) and ${X.metrics.n_train-X.syn.length} historical DGMS explosion narratives. It says which explosion mechanism your description resembles, not the chance of an explosion.${coalOnly?` <b>Note:</b> this category was defined for coal mines, but the mine context is metal / non-coal. Check the description.`:""}${cls.dustRule?` The classifier's top label was “${esc(cls.probs[0].cat)}”, but your description names a non-coal combustible dust and does not mention coal, so the coal-dust classes are not supported; it is shown as the non-coal mechanism.`:""}${text.trim().split(/\s+/).length<6?` <b>Not enough detail to settle the mechanism.</b> Say what the dust or gas is, where it is (mine type, plant or underground working) and any ignition source.`:cls.ambiguous?(()=>{ const n=cls.probs.find(c=>c.cat!==t.cat); const both=xa.cat2?" Preventive measures for both are considered below.":"";
+      return (t.p-n.p)<0.10?` <b>Two mechanisms fit about equally</b> (${esc(t.cat)}: ${pct(t.p)}%; ${esc(n.cat)}: ${pct(n.p)}%).${both}`
+                          :` <b>Weak match:</b> ${pct(t.p)}% for ${esc(t.cat)}, next ${esc(n.cat)} at ${pct(n.p)}%; treat the category as tentative.${both}`; })():""}${cls.metalRule?` The classifier's top label was “${esc(cls.probs[0].cat)}”; because your description names explosives or blasting and no gas or dust, it is shown as blasting, the category SANKET uses for explosives accidents in non-coal mines.`:""}</p>
           <dl class="kv xkv">
             <dt>Explosion evidence</dt><dd>${feats.map(f=>`<span class="pill">${esc(f)}</span>`).join(" ")}</dd>
             <dt>Words behind the category</dt><dd>${cls.terms.length?cls.terms.map(esc).join(", "):"none specific"}</dd>
@@ -995,7 +1035,7 @@ function run(opts={}){
       if(ev.relevant){
         const cls=xClassify(text, ev, mt), ctx=mineContext(text, mt);
         const hist=rankHistX(q, place, mt, cls.top.cat, ev), syn=rankSyn(text, mt, cls.top.cat);
-        xa={ev,cls,ctx,hist,syn,nHist:hist.matches.length,nSyn:syn.matches.length,text,hz,unclear};
+        xa={ev,cls,ctx,hist,syn,nHist:hist.matches.length,nSyn:syn.matches.length,text,hz,unclear,cat2:secondClass(cls,text,mt)};
       }
     }
   }
@@ -1023,7 +1063,7 @@ function run(opts={}){
         <div class="btns" style="margin-top:12px">${place||mt?`<button type="button" class="btn2" id="broaden">Search all places and mine types</button>`:""}<button type="button" class="btn2" id="allacc">Search all DGMS accidents</button></div></div></div></div>`;
     const synBlock = xa.syn.matches.length ? listBlock("sx","Synthetic training scenarios", `<p class="partial">Generated examples from ${esc(X.source)}. They are <b>not</b> DGMS accidents, did not happen, and are never counted as evidence. Place-of-work filters are not applied to them because their work-area context is broad.</p>`) :
       `<div class="block"><div class="sec-h reveal"><h2>Synthetic training scenarios</h2><span class="sub">None found</span></div><p class="partial">No synthetic scenario matches this description${mt?` for ${esc(mtLabel(mt))}`:""}.</p></div>`;
-    out.innerHTML = relaxedNote + explosionPanel(xa,pct) + (unclear?"":hazardPanel(hz,probs,unclear,pct)) + xMeasuresBlock(xa.cls.top.cat, text, top, mt) + histBlock + synBlock;
+    out.innerHTML = relaxedNote + explosionPanel(xa,pct) + (unclear?"":hazardPanel(hz,probs,unclear,pct)) + xMeasuresBlock(xa.cls.top.cat, text, top, mt, xa.cat2) + histBlock + synBlock;
     if(xa.hist.matches.length) makePager("hx", xa.hist.matches, m=>xCaseHTML(m,xa.hist.qv), "historical explosion records", `(from ${xa.hist.eligible} SANKET explosion records ${place||mt?"in these filters":"(coal and non-coal)"})`);
     if(xa.syn.matches.length) makePager("sx", xa.syn.matches, synHTML, "synthetic scenarios", `(from ${xa.syn.eligible}${mt?` for ${mtLabel(mt)}`:""})`);
   } else {

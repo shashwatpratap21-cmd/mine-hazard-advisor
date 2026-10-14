@@ -14,7 +14,7 @@
         "Metal Mine: Gas, Dust and Other Explosion Mechanisms"
       ],
       "measure": "Dilute firedamp with adequate ventilation and sample the mine air for methane frequently, at many points.",
-      "keywords": "ventilat|methane|firedamp|gas accumulat|air ?flow|fan",
+      "keywords": "ventilat|methane|firedamp|gas accumulat|air ?flow|fan|(?:flammable|inflammable|explosive|combustible) gas|accumulat\\w* (?:of )?(?:\\w+ ){0,2}gas",
       "dgms_pattern": "inspected and examined for ventilation",
       "refs": [
         {
@@ -260,7 +260,7 @@
         "Combined Methane and Coal-Dust Explosion"
       ],
       "measure": "Where firedamp may be present, keep blasting to a minimum, examine for methane immediately before charging and firing, and use water stemming or permitted blasting alternatives.",
-      "keywords": "blast|shot|charg|explosive|stemming|fir",
+      "keywords": "blast|shot|charg|explosive|stemming|firing",
       "dgms_pattern": "inflammable gas.{0,120}(?:charging|firing)|(?:charging|firing).{0,120}inflammable gas|tests? for inflammable gas been made in the area lying within",
       "refs": [
         {
@@ -278,7 +278,7 @@
           "note": "Blasting in coal and in roadhead rippings and drifts was a dangerous source of firedamp ignition in the past."
         }
       ],
-      "context": "coal|gas|methane|firedamp|underground|gallery|heading|seam"
+      "context": "coal|gas|gassy|methane|firedamp|seam"
     },
     {
       "id": "G12",
@@ -362,7 +362,7 @@
         "Blasting and Explosives-Related Explosion"
       ],
       "measure": "Before shotfiring in coal, neutralise or consolidate dust within 10–20 m of the face with water or inert dust.",
-      "keywords": "blast|shot|fir|dust|coal face",
+      "keywords": "blast|shot|firing|dust|coal face",
       "dgms_pattern": "",
       "refs": [
         {

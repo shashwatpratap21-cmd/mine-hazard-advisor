@@ -308,6 +308,21 @@ header{justify-content:flex-start}
 .mtab-wrap{overflow-x:auto}
 .bk{display:grid;gap:6px;padding:var(--s3) var(--s4);border:1px solid var(--line);border-radius:var(--r-sm);background:var(--inset);font-size:.95rem;color:var(--text-2)}
 .bk b{color:var(--text);font-weight:500}
+
+/* situation console */
+.ex-field{gap:10px}
+.ex-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ex-title{font:700 .95rem/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2)}
+.ex-help{font-size:.82rem;color:var(--text-3)}
+#ex .chip,#exMore .chip{height:56px;display:flex;align-items:center;white-space:normal;overflow:hidden;line-height:1.3;padding:8px 12px;font-size:.88rem;color:#B9C4CC}
+#ex .chip:hover,#exMore .chip:hover{color:var(--text)}
+#ex .chip[aria-pressed="true"],#exMore .chip[aria-pressed="true"]{color:var(--text)}
+#exMore{margin-top:-2px}
+.ex-toggle{justify-self:start;background:none;border:0;padding:4px 0;color:var(--text-2);font:500 .88rem var(--body);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ex-toggle:hover{color:var(--text)}
+.go{width:100%}
+.go:focus-visible{outline:2px solid var(--amber-hi);outline-offset:3px}
+form .field>.label{color:var(--text-2)}
 </style>
 
 <div class="wrap">
@@ -330,7 +345,7 @@ header{justify-content:flex-start}
     <p class="form-h">Describe the job</p>
     <div class="field">
       <label class="label" for="q">Situation</label>
-      <textarea id="q" placeholder="e.g., methane accumulating in an underground coal mine, airborne coal dust creating an explosion risk, drilling near a misfired blast hole, or an electrical spark in a gas-filled working"></textarea>
+      <textarea id="q" placeholder="Describe an explosion-related mining situation, e.g., methane accumulation underground or combustible dust near an ignition source."></textarea>
     </div>
     <div class="row2">
       <div class="field"><label class="label" for="place">Place of work</label>
@@ -338,9 +353,11 @@ header{justify-content:flex-start}
       <div class="field"><label class="label" for="mt">Mine type</label>
         <select id="mt"><option value="">Any</option></select></div>
     </div>
-    <div class="field">
-      <span class="label" id="exl">Examples</span>
+    <div class="field ex-field">
+      <div class="ex-h"><span class="ex-title" id="exl">Quick examples</span><span class="ex-help">Select to autofill</span></div>
       <div class="chips" id="ex" role="group" aria-labelledby="exl"></div>
+      <div class="chips" id="exMore" role="group" aria-label="More examples" hidden></div>
+      <button type="button" class="ex-toggle" id="exToggle" aria-expanded="false" aria-controls="exMore">View all examples</button>
     </div>
     <button class="go" id="go" type="submit"><span class="spin" aria-hidden="true"></span><span id="goT">Find precedents</span></button>
   </form>
@@ -548,21 +565,27 @@ const ICON_PATHS = {
 };
 const icon = h => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[h]||ICON_PATHS["Other causes"]}</svg>`;
 
-for(const p of D.places){ if(p==="Above Ground") continue; $("place").add(new Option(p,p)); }
+for(const p of D.places){ if(p==="Above Ground") continue; $("place").add(new Option(p==="Below Ground"?"Underground":p,p)); }
 for(const m of D.mine_types) $("mt").add(new Option(m.replace(/ \(DGMS.*\)/,""),m));
+// Input suggestions only (not accident evidence). [short title, full situation, place filter, mine-type filter, quick?]
+// Filters are set only where the situation itself states them; selecting an example fills the form but does not run it.
 const EXAMPLES = [
-  ["Drilling holes on a bench near an old blasted area in an opencast granite quarry","Opencast",""],
-  ["Auxiliary fan has stopped and methane is accumulating at the face of an underground development heading","","Coal"],
-  ["Drilling into a split gallery of a depillaring panel where a misfired shot hole may remain","","Coal"],
-  ["Welding a pipeline underground near a sealed-off fire area where firedamp may be present","","Coal"],
-  ["Gas testing before blasting in a degree III gassy seam","","Coal"],
-  ["Dry coal dust has collected along the underground belt conveyor roadway and no stone dust has been spread","","Coal"]
+  ["Methane accumulation in an underground coal working","Auxiliary fan has stopped and methane is accumulating at the face of an underground development heading","","Coal",1],
+  ["Coal dust dispersed along underground mine roadways","Dry coal dust has collected along the underground belt conveyor roadway and no stone dust has been spread","","Coal",1],
+  ["Drilling near a suspected misfired blast hole","Drilling into a split gallery of a depillaring panel where a misfired shot hole may remain","","Coal",1],
+  ["Combustible dust in a metal-ore processing plant","Fine combustible dust accumulates inside a metal-ore processing plant's dust collection system near a potential ignition source","","Metal ore",1],
+  ["Drilling near an old blasted area in a granite quarry","Drilling holes on a bench near an old blasted area in an opencast granite quarry","Opencast","",0],
+  ["Welding near a sealed fire area with possible firedamp","Welding a pipeline underground near a sealed-off fire area where firedamp may be present","","Coal",0],
+  ["Gas testing before blasting in a gassy seam","Gas testing before blasting in a degree III gassy seam","","Coal",0]
 ];
-function setPressed(btn){ document.querySelectorAll("#ex .chip").forEach(c=>c.setAttribute("aria-pressed", c===btn?"true":"false")); }
-EXAMPLES.forEach(([t,p,m])=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("aria-pressed","false");
-  b.textContent=t; b.title=t;
-  b.onclick=()=>{ $("q").value=t; $("place").value=p; $("mt").value=m; setPressed(b); submit(); }; $("ex").append(b); });
-$("q").addEventListener("input",()=>setPressed(null));
+function setPressed(btn){ document.querySelectorAll("#ex .chip, #exMore .chip").forEach(c=>c.setAttribute("aria-pressed", c===btn?"true":"false")); }
+EXAMPLES.forEach(([title,t,p,m,quick])=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("aria-pressed","false");
+  b.textContent=title; b.title=t;
+  b.onclick=()=>{ $("q").value=t; $("place").value=p; $("mt").value=m; setPressed(b); $("q").focus({preventScroll:true}); };
+  $(quick?"ex":"exMore").append(b); });
+// editing the text away from the selected example clears the selection
+$("q").addEventListener("input",()=>{ const sel=document.querySelector("#ex .chip[aria-pressed=true], #exMore .chip[aria-pressed=true]"); if(sel&&sel.title!==$("q").value) setPressed(null); });
+$("exToggle").onclick=()=>{ const open=$("exMore").hidden; $("exMore").hidden=!open; $("exToggle").setAttribute("aria-expanded",String(open)); $("exToggle").textContent=open?"Show fewer examples":"View all examples"; };
 
 let last=null, ctl=null;
 function confClass(p){ return p>=0.35?"hi":p>=0.2?"mid":"lo"; }
@@ -766,8 +789,10 @@ function showError(err){
 }
 let pendingRun=null;
 function submit(){
+  if(pendingRun||$("go").disabled) return;                       // a search is already running
   const btn=$("go"); btn.disabled=true; btn.classList.add("busy"); $("goT").textContent="Analysing…";
-  pendingRun=setTimeout(()=>{ pendingRun=null; try{ run(); } catch(err){ showError(err); } finally { btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents"; } }, 140);
+  $("out").setAttribute("aria-busy","true");
+  pendingRun=setTimeout(()=>{ pendingRun=null; $("out").removeAttribute("aria-busy"); try{ run(); } catch(err){ showError(err); } finally { btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents"; } }, 140);
 }
 function interp(p){ return p>=0.35?"Strong match":p>=0.2?"Moderate match":"Weak match"; }
 
@@ -1417,11 +1442,11 @@ if(MD){ $("msList").innerHTML=[...new Set(MD.mines.map(m=>m.name))].map(n=>`<opt
 
 // Header logo / title: start a new search. Resets only the Advisor's on-page state; no data is touched and the page is not reloaded.
 function resetAdvisor(){
-  if(pendingRun){ clearTimeout(pendingRun); pendingRun=null; }          // a search that has not rendered yet must not appear afterwards
+  if(pendingRun){ clearTimeout(pendingRun); pendingRun=null; } $("out").removeAttribute("aria-busy");          // a search that has not rendered yet must not appear afterwards
   try{ ctl?.abort(); }catch{}                                            // stop a running "More recommendations" request
   const btn=$("go"); btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents";
   $("q").value=""; $("place").value=""; $("mt").value="";
-  document.querySelectorAll("#ex .chip").forEach(c=>c.setAttribute("aria-pressed","false"));
+  setPressed(null);
   last=null; for(const k of ["hx","sx","acc"]) delete PAGERS[k];
   idle();
   setView("advisor");

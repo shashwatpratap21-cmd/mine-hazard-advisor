@@ -36,6 +36,12 @@ body{margin:0;background:var(--bg);background-image:radial-gradient(1200px 500px
 header{display:flex;align-items:center;gap:var(--s2);padding-block:var(--s4);border-bottom:1px solid var(--line)}
 .emblem{width:40px;height:40px;flex:none}
 h1{font:700 clamp(1.7rem,3vw,2.15rem)/1 var(--display);letter-spacing:.06em;text-transform:uppercase;margin:0;color:var(--silver)}
+.brand-btn{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;border-radius:4px;transition:color .18s ease}
+.brand-btn:hover,header:has(#brandLogo:hover) .brand-btn{color:#fff}
+.brand-btn:focus-visible{outline:2px solid var(--amber-hi);outline-offset:4px}
+#brandLogo{cursor:pointer;transition:filter .18s ease}
+#brandLogo:hover,header:has(.brand-btn:hover) #brandLogo{filter:brightness(1.2)}
+@media (prefers-reduced-motion:reduce){.brand-btn,#brandLogo{transition:none}}
 .tag{margin:4px 0 0;color:var(--text-3);font-size:.92rem}
 
 /* layout */
@@ -307,14 +313,14 @@ header{justify-content:flex-start}
 
 <div class="wrap">
 <header>
-  <svg class="emblem" viewBox="0 0 40 40" aria-hidden="true">
+  <svg class="emblem" id="brandLogo" viewBox="0 0 40 40" aria-hidden="true">
     <defs><linearGradient id="emT" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C9D2D8"/><stop offset=".5" stop-color="#5E6C75"/><stop offset="1" stop-color="#9AA7AF"/></linearGradient></defs>
     <polygon points="20,1.5 37,11 37,29 20,38.5 3,29 3,11" fill="#141B20" stroke="url(#emT)" stroke-width="1.5"/>
     <path d="M20 11 L29 27 H11 Z" fill="#F2B544"/>
     <path d="M20 16.5 V21.5" stroke="#1C1305" stroke-width="2.2" stroke-linecap="round"/><circle cx="20" cy="24.2" r="1.2" fill="#1C1305"/>
   </svg>
   <div>
-    <h1>Mine Hazard Advisor</h1>
+    <h1><button type="button" class="brand-btn" id="brandBtn" aria-label="Mine Hazard Advisor — Start a new search" title="Start a new search">Mine Hazard Advisor</button></h1>
     <p class="tag">Evidence-backed explosion hazard intelligence for coal and metal mines.</p>
   </div>
   <nav class="views" role="tablist" aria-label="Application views"><button type="button" role="tab" id="tab-advisor" data-view="advisor" aria-selected="true" aria-controls="advisorView" tabindex="0">Advisor</button><button type="button" role="tab" id="tab-causes" data-view="causes" aria-selected="false" aria-controls="causes" tabindex="-1">Explosion causes</button><button type="button" role="tab" id="tab-mines" data-view="mines" aria-selected="false" aria-controls="mines" tabindex="-1">Mine search</button></nav>
@@ -752,16 +758,17 @@ function rankSyn(text, mt, cat){
 }
 
 function idle(){
-  $("out").innerHTML=(X?"":xErrHTML())+`<div class="empty card reveal">${icon("Other causes")}<p><b>Ready.</b> Describe the job you are going to do, or pick an example, then press <b>Find precedents</b>. To browse records without a description, just choose a place of work or mine type and press the button.</p></div>`;
+  $("out").innerHTML=(X?"":xErrHTML())+`<div class="empty card reveal">${icon("Other causes")}<p><b>Ready.</b> Describe a mining situation or select an example, then press <b>Find precedents</b> to analyse explosion-related hazards and retrieve relevant historical accident records. To browse records without a description, just choose a place of work or mine type and press the button.</p></div>`;
 }
 function xErrHTML(){ return `<div class="notice warn reveal" role="alert"><b>Explosion database not loaded.</b> ${esc(XERR)}. General hazard analysis still works; explosion-specific analysis is switched off until the page is rebuilt with <code>build_site.py</code>.</div>`; }
 function showError(err){
   console.error("[Mine Hazard Advisor] search failed:", err);
   $("out").innerHTML=`<div class="empty card reveal" role="alert">${icon("Other causes")}<p><b>Something went wrong while searching.</b> ${esc(err&&err.message||String(err))}. Try again; if it keeps happening, reload the page.</p></div>`;
 }
+let pendingRun=null;
 function submit(){
   const btn=$("go"); btn.disabled=true; btn.classList.add("busy"); $("goT").textContent="Analysing…";
-  setTimeout(()=>{ try{ run(); } catch(err){ showError(err); } finally { btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents"; } }, 140);
+  pendingRun=setTimeout(()=>{ pendingRun=null; try{ run(); } catch(err){ showError(err); } finally { btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents"; } }, 140);
 }
 function interp(p){ return p>=0.35?"Strong match":p>=0.2?"Moderate match":"Weak match"; }
 
@@ -1409,6 +1416,21 @@ function msBooks(m,H){
 if(MD){ $("msList").innerHTML=[...new Set(MD.mines.map(m=>m.name))].map(n=>`<option value="${esc(n)}">`).join("");
   $("msForm").addEventListener("submit",e=>{ e.preventDefault(); msRun(); }); }
 
+// Header logo / title: start a new search. Resets only the Advisor's on-page state; no data is touched and the page is not reloaded.
+function resetAdvisor(){
+  if(pendingRun){ clearTimeout(pendingRun); pendingRun=null; }          // a search that has not rendered yet must not appear afterwards
+  try{ ctl?.abort(); }catch{}                                            // stop a running "More recommendations" request
+  const btn=$("go"); btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents";
+  $("q").value=""; $("place").value=""; $("mt").value="";
+  document.querySelectorAll("#ex .chip").forEach(c=>c.setAttribute("aria-pressed","false"));
+  last=null; for(const k of ["hx","sx","acc"]) delete PAGERS[k];
+  idle();
+  setView("advisor");
+  window.scrollTo({top:0,behavior:"auto"});
+  $("q").focus({preventScroll:true});
+}
+$("brandBtn").addEventListener("click", resetAdvisor);
+$("brandLogo").addEventListener("click", resetAdvisor);
 function setView(v){
   const c=v==="causes";
   document.querySelectorAll(".views [role=tab]").forEach(b=>{ const on=b.dataset.view===v; b.setAttribute("aria-selected",String(on)); b.tabIndex=on?0:-1; });

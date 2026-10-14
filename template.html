@@ -234,6 +234,7 @@ header{justify-content:flex-start}
 @media (prefers-reduced-motion:reduce){.views [role="tab"],.views [role="tab"]::after{transition:none}}
 @media (max-width:640px){header{flex-wrap:wrap;row-gap:var(--s3)}header>div{flex:1 1 0;min-width:0}.views{margin-left:0;flex-basis:100%;height:44px}.views [role="tab"]{flex:1 1 0;min-width:0;padding:0 10px;font-size:.92rem;letter-spacing:.08em}}
 @media (max-width:380px){.views [role="tab"]{padding:0 6px;font-size:.84rem;letter-spacing:.05em}}
+@media (max-width:480px){.views{height:auto;min-height:44px}.views [role="tab"]{white-space:normal;line-height:1.15;padding:6px;min-height:36px;text-align:center}}
 
 /* explosion causes analytics */
 .cz{display:grid;gap:var(--s5);margin-top:var(--s5)}
@@ -275,6 +276,32 @@ header{justify-content:flex-start}
 @media (prefers-reduced-motion:no-preference){.trk .b{transition:width .45s cubic-bezier(.2,.8,.2,1)}}
 .cz-foot{margin:0;font-size:.9rem;color:var(--text-2);line-height:1.55}
 .cz-foot b{color:var(--text);font-weight:500}
+
+/* mine / colliery search */
+.ms-f{padding:var(--s4);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s3);align-items:end}
+@media (max-width:600px){.ms-f{grid-template-columns:minmax(0,1fr)}}
+#msQ{font:inherit;font-size:1rem;color:var(--text);background:var(--inset);border:1px solid var(--line-2);border-radius:var(--r-sm);width:100%;
+  padding:12px 14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);caret-color:var(--amber)}
+#msQ::placeholder{color:var(--text-3)}
+#msQ:focus{outline:none;border-color:rgba(242,181,68,.7);box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 3px rgba(242,181,68,.15)}
+.ms-f .go{min-width:160px}
+#msOut{display:grid;gap:var(--s5);margin-top:var(--s4)}
+.cands{display:grid;gap:var(--s2)}
+.cand{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px var(--s3);align-items:center;text-align:left;width:100%;font:inherit;color:inherit;cursor:pointer;
+  padding:var(--s3) var(--s4);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);transition:border-color .15s,background .15s}
+.cand:hover{border-color:rgba(242,181,68,.45);background:var(--surface-2)}
+.cand .nm{font-weight:600;color:var(--text)} .cand .meta{grid-column:1/-1;font-size:.9rem;color:var(--text-2)}
+.mhead{padding:var(--s4) var(--s5);display:grid;gap:var(--s2)}
+@media (max-width:720px){.mhead{padding:var(--s3)}}
+.mhead h2{font:700 clamp(1.5rem,2.6vw,2rem)/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase;margin:0;color:#fff;overflow-wrap:anywhere}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}
+@media (max-width:900px){.mgrid{grid-template-columns:minmax(0,1fr)}}
+.mtab{width:100%;border-collapse:collapse;font-size:.92rem}
+.mtab th,.mtab td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.mtab th{color:var(--text-2);font-weight:500}.mtab td{color:var(--text)}.mtab td.n{font-family:var(--mono);text-align:right}
+.mtab-wrap{overflow-x:auto}
+.bk{display:grid;gap:6px;padding:var(--s3) var(--s4);border:1px solid var(--line);border-radius:var(--r-sm);background:var(--inset);font-size:.95rem;color:var(--text-2)}
+.bk b{color:var(--text);font-weight:500}
 </style>
 
 <div class="wrap">
@@ -289,7 +316,7 @@ header{justify-content:flex-start}
     <h1>Mine Hazard Advisor</h1>
     <p class="tag">Evidence-backed explosion hazard intelligence for coal and metal mines.</p>
   </div>
-  <nav class="views" role="tablist" aria-label="Application views"><button type="button" role="tab" id="tab-advisor" data-view="advisor" aria-selected="true" aria-controls="advisorView" tabindex="0">Advisor</button><button type="button" role="tab" id="tab-causes" data-view="causes" aria-selected="false" aria-controls="causes" tabindex="-1">Explosion causes</button></nav>
+  <nav class="views" role="tablist" aria-label="Application views"><button type="button" role="tab" id="tab-advisor" data-view="advisor" aria-selected="true" aria-controls="advisorView" tabindex="0">Advisor</button><button type="button" role="tab" id="tab-causes" data-view="causes" aria-selected="false" aria-controls="causes" tabindex="-1">Explosion causes</button><button type="button" role="tab" id="tab-mines" data-view="mines" aria-selected="false" aria-controls="mines" tabindex="-1">Mine search</button></nav>
 </header>
 
 <main id="advisorView" role="tabpanel" aria-labelledby="tab-advisor">
@@ -339,8 +366,21 @@ header{justify-content:flex-start}
   </div>
   <div id="czRec"></div>
 </section>
+
+<section class="cz" id="mines" hidden role="tabpanel" aria-labelledby="tab-mines">
+  <div class="cz-h"><h2>Search by Mine / Colliery Name</h2>
+    <p>Every explosion-related record, outcome and reference available for one mine in the project's sources.</p></div>
+  <form class="ms-f card" id="msForm" autocomplete="off" role="search">
+    <div class="field"><label class="label" for="msQ">Mine or colliery name</label>
+      <input id="msQ" list="msList" placeholder="Enter mine name, colliery name, quarry, or metal mine..."></div>
+    <button class="go" id="msGo" type="submit">Search</button>
+    <datalist id="msList"></datalist>
+  </form>
+  <div id="msOut" aria-live="polite"></div>
+</section>
 </div>
 
+<script id="mdata" type="application/json">__MDATA__</script>
 <script id="data" type="application/json">__DATA__</script>
 <script id="xdata" type="application/json">__XDATA__</script>
 <script>
@@ -1232,23 +1272,160 @@ function czRender(){
     $("czClear").onclick=()=>{ CZ.sel=null; czRender(); };
   } else $("czRec").innerHTML=recs.length?`<p class="partial">Select a bar to list its accident records.</p>`:"";
 }
+
+// ---------- Mine / colliery search (model/mines.json; explosion evidence = SANKET records, synthetic scenarios excluded) ----------
+let MD=null; try{ MD=JSON.parse(document.getElementById("mdata").textContent); }catch(e){ MD=null; console.error("[Mine Hazard Advisor] mine index not loaded:", e); }
+const MBY=MD?Object.fromEntries(MD.mines.map(m=>[m.key,m])):{};
+const HBY=Object.fromEntries(HREC.map(h=>[h.id,h]));
+// same normalisation as build_mines.py norm()
+function mnorm(s){
+  s=String(s||"").toLowerCase().replace(/&/g," and ").replace(/u\s*\/\s*g/g," ug ").replace(/(?<=[a-z])(?=\d)|(?<=\d)(?=[a-z])/g," ").replace(/[^a-z0-9]+/g," ");
+  return s.split(/\s+/).filter(Boolean).map(t=>MD.abbr[t]||t).join(" ");
+}
+function lev(a,b){ const m=a.length,n=b.length; if(!m||!n) return Math.max(m,n); let p=[...Array(n+1).keys()];
+  for(let i=1;i<=m;i++){ const c=[i]; for(let j=1;j<=n;j++) c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1)); p=c; } return p[n]; }
+// Exact = same normalised name (or a documented alias). Partial = every word of the query starts a word of the name.
+// Possible = a distinctive word of the query is within a small spelling distance of a word of the name.
+function findMines(q){
+  const qn=mnorm(q), qt=qn.split(" ").filter(Boolean); if(!qt.length) return [];
+  const GEN=new Set(MD.generic), out=[];
+  for(const m of MD.mines){
+    const forms=[...m.names,...m.aliases].map(mnorm); let type=null, score=0;
+    if(forms.includes(qn)) { type="exact"; score=3; }
+    else if(forms.some(f=>{ const ft=f.split(" "); return qt.every(t=>ft.some(w=>w.startsWith(t))); })) { type="partial"; score=2; }
+    else {
+      const dq=qt.filter(t=>t.length>=4&&!GEN.has(t)); if(dq.length){
+        const ok=forms.some(f=>{ const ft=f.split(" ").filter(w=>w.length>=4&&!GEN.has(w)); return dq.every(t=>ft.some(w=>lev(t,w)<=(t.length>=7?2:1))); });
+        if(ok){ type="possible"; score=1; }
+      }
+    }
+    if(type) out.push({m,type,score});
+  }
+  return out.sort((a,b)=>b.score-a.score||b.m.hrec.length-a.m.hrec.length||a.m.name.localeCompare(b.m.name));
+}
+const NA="Not available in source";
+const MECH=k=>(typeof CZ_MECH!=="undefined"&&CZ_MECH[k])||k;
+function exStatus(h){ return /explosion|ignition|fire-?damp/i.test(h.cause_label)||(h.kind==="narrative"&&/explo|detonat|ignit/i.test(h.situation)); }
+function mineMeta(m){
+  const sect=m.sector==="coal"?"Coal":m.sector==="noncoal"?"Non-coal / metal":"Named in a reference book only";
+  const loc=[m.districts.join(", "),m.states.join(", ")].filter(Boolean).join(", ")||NA;
+  const types=m.types.map(mtLabel).filter(t=>t!=="Coal");
+  return [sect, types.length?types.join(", "):(m.sector==="noncoal"?"mine type: "+NA:""), loc, m.minerals.filter(x=>x!=="Coal"||m.sector!=="coal").join(", ")||(m.sector==="coal"?"":"mineral: "+NA)].filter(Boolean).map(esc).join(" · ");
+}
+function msRun(){
+  const q=$("msQ").value.trim(), out=$("msOut");
+  if(!MD){ out.innerHTML=`<div class="notice warn">The mine index is not loaded. Rebuild the page with <code>build_mines.py</code> and <code>build_site.py</code>.</div>`; return; }
+  if(q.length<2){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<p><b>Type at least two letters of a mine or colliery name.</b></p></div>`; return; }
+  const res=findMines(q), exact=res.filter(r=>r.type==="exact");
+  if(!res.length){ out.innerHTML=`<div class="empty card reveal">${icon("Other causes")}<div><p><b>No matching mine found in the available project sources.</b> Searched: ${MD.sources.explosion_records} SANKET explosion records, ${MD.sources.accidents_rows} DGMS SANKET accident narratives (2016–2022), the SANKET explosion workbook (${MD.sources.workbook_rows} rows) and mine names in both reference books. Check the spelling or try part of the name.</p></div></div>`; return; }
+  if(exact.length===1) return msProfile(exact[0].m, res.filter(r=>r!==exact[0]));
+  const lab={exact:"Exact match",partial:"Partial match",possible:"Possible spelling match"};
+  out.innerHTML=listBlock("mc","Matching mines",`<p class="partial">Select the mine you mean.${exact.length>1?` ${exact.length} different mines have exactly this name; they are kept apart because their sector or location differs.`:""}</p>`);
+  const card=r=>`<button type="button" class="cand" data-k="${esc(r.m.key)}"><span class="nm">${esc(r.m.name)}</span>
+      <span class="prov ${r.type==="exact"?"ok":r.type==="partial"?"src":"pot"}">${lab[r.type]}</span>
+      <span class="meta">${mineMeta(r.m)} · ${r.m.hrec.length} explosion record${r.m.hrec.length===1?"":"s"}${r.m.other.length?` · ${r.m.other.length} other DGMS accident${r.m.other.length===1?"":"s"}`:""}${r.m.book.length?" · named in a reference book":""}</span></button>`;
+  makePager("mc",res,card,"matching mines","");
+  // the pager re-renders cards, so clicks are handled on the container
+  $("mc-list").onclick=e=>{ const b=e.target.closest(".cand"); if(b) msProfile(MBY[b.dataset.k], res.filter(r=>r.m.key!==b.dataset.k&&r.type!=="possible").slice(0,6)); };
+}
+function barRows(rows, total){
+  const max=Math.max(1,...rows.map(r=>r[1]));
+  return rows.map(([k,n,unk])=>`<div class="crow" style="cursor:default"><span class="lab">${esc(k)}${unk?"<small>cause not established</small>":""}</span><span class="tracks"><div class="trk${unk?" unk":""}" title="${esc(k)}: ${n} record${n===1?"":"s"}"><span class="b" style="width:${(n/max*88).toFixed(1)}%"></span><span class="n">${n}</span></div></span></div>`).join("");
+}
+function msProfile(m, others){
+  const out=$("msOut"), H=m.hrec.map(i=>HBY[i]).sort((a,b)=>(b.year||0)-(a.year||0));
+  const killed=H.reduce((a,h)=>a+h.killed,0), injRec=H.filter(h=>Number.isFinite(h.injured)), inj=injRec.reduce((a,h)=>a+h.injured,0);
+  const confirmed=H.filter(exStatus).length, unk=H.filter(h=>/type not recorded/.test(h.xcat)).length, dupN=H.filter(h=>h.also_listed).length;
+  const by=(f)=>{ const c=new Map(); H.forEach(h=>{ const k=f(h); c.set(k,(c.get(k)||0)+1); }); return [...c.entries()]; };
+  const mech=by(h=>MECH(h.xcat)).map(([k,n])=>[k,n,/type not recorded/.test(k)]).sort((a,b)=>a[2]-b[2]||b[1]-a[1]);
+  const years=by(h=>h.year?String(h.year):NA).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,n])=>[k,n,false]);
+  const places=by(h=>!h.place||/not reported/i.test(h.place)?"Place not recorded":h.place), types=by(h=>mtLabel(h.mine_type));
+  const head=`<div class="mhead card reveal"><span class="label">${m.sector==="book"?"Reference-book mention":"Mine / colliery"}</span><h2>${esc(m.name)}</h2>
+    <p class="partial">${mineMeta(m)}</p>
+    ${m.names.length>1||m.aliases.length?`<p class="partial">Names in the sources: ${[...m.names,...m.aliases.map(a=>a+" (documented duplicate listing)")].map(esc).join(" · ")}</p>`:""}
+    ${H.length&&m.other.length?`<p class="partial">The DGMS SANKET narratives (2016–2022) also record ${m.other.length} other fatal accident${m.other.length===1?"":"s"} at this mine that ${m.other.length===1?"is not an explosion":"are not explosions"} (${[...new Map(m.other.map(o=>[o.cause,m.other.filter(x=>x.cause===o.cause).length])).entries()].map(([k,n])=>esc(k)+" "+n).join(", ")}); ${m.other.length===1?"it is":"they are"} not counted here.</p>`:""}
+    ${m.name_only.length?`<p class="partial">${m.name_only.length} record${m.name_only.length===1?" comes":"s come"} from SANKET's major-accident list, which gives no location; ${m.name_only.length===1?"it is":"they are"} attached to this mine by exact name only.</p>`:""}
+    ${others&&others.length?`<p class="partial">Other mines matching your search: ${others.map(r=>`<button type="button" class="linkbtn mo" data-k="${esc(r.m.key)}">${esc(r.m.name)}</button>`).join(" · ")}</p>`:""}</div>`;
+  let body="";
+  if(H.length){
+    const kp=[["main",H.length,`Explosion-related records${dupN?` (unique incidents; ${dupN} duplicate listing${dupN===1?"":"s"} merged)`:" (unique incidents)"}`],
+      ["",confirmed,"Explosion documented in the record"],["",H.length-confirmed,"Explosives accident, explosion not explicitly recorded"],
+      ["red",killed,"Persons killed, as recorded by DGMS"],["",injRec.length?inj:NA,`Seriously injured${injRec.length<H.length?` (${H.length-injRec.length} record${H.length-injRec.length===1?"":"s"} without a figure)`:""}`],
+      ["",unk,"Records with the explosion mechanism not recorded"]];
+    const mtRows=[...new Set(H.map(h=>h.xcat))].map(c=>{ const g=H.filter(h=>h.xcat===c), ir=g.filter(h=>Number.isFinite(h.injured));
+      return `<tr><td>${esc(MECH(c))}</td><td class="n">${g.length}</td><td class="n">${g.reduce((a,h)=>a+h.killed,0)}</td><td class="n">${ir.length?ir.reduce((a,h)=>a+h.injured,0):"—"}${ir.length<g.length?"*":""}</td><td class="n">${g.filter(h=>h.kind==="narrative").length} / ${g.filter(h=>h.kind==="list").length}</td></tr>`; }).join("");
+    body+=`<div class="kpis">${kp.map(([c,v,k])=>`<div class="kpi card ${c}"><span class="v">${v}</span><span class="k">${esc(k)}</span></div>`).join("")}</div>
+    <div class="mgrid">
+      <div class="chart card"><div class="sec-h"><h2>By explosion mechanism</h2></div><div class="rows">${barRows(mech)}</div>
+        <p class="cz-foot">Bars add up to <b>${mech.reduce((a,r)=>a+r[1],0)}</b> = the ${H.length} records. Mechanism is the project's mapping of the DGMS cause label; the original label is on each record.</p></div>
+      <div class="chart card"><div class="sec-h"><h2>By year</h2></div><div class="rows">${barRows(years)}</div>
+        <p class="cz-foot">Years with a record only. Before 2016 SANKET lists only major accidents (4 or more killed).</p></div>
+    </div>
+    <div class="chart card"><div class="sec-h"><h2>Mechanisms and recorded outcomes</h2></div>
+      <div class="mtab-wrap"><table class="mtab"><thead><tr><th>Mechanism</th><th>Records</th><th>Killed</th><th>Seriously injured</th><th>Narrative / label only</th></tr></thead><tbody>${mtRows}</tbody></table></div>
+      <p class="cz-foot">Place of work: ${places.map(([k,n])=>`${esc(k)} ${n}`).join(" · ")} · Mine type: ${types.map(([k,n])=>`${esc(k)} ${n}`).join(" · ")}${injRec.length<H.length?" · * some records give no injury figure; missing figures are not counted as zero":""}. These totals cover the records available in SANKET's files, not the complete safety history of the mine; counts are not explosion rates.</p></div>`;
+    body+=msMeasures(m,H);
+    body+=`<div id="mxwrap">${listBlock("mx","Explosion-related records",`<p class="partial">All ${H.length} record${H.length===1?"":"s"}, newest first.</p>`)}</div>`;
+  } else if(m.sector!=="book"){
+    const cg=new Map(); m.other.forEach(o=>cg.set(o.cause,(cg.get(o.cause)||0)+1));
+    body+=`<div class="empty card reveal">${icon("Other causes")}<div><p><b>No explosion-related record for this mine in the available datasets.</b> ${m.other.length?`The DGMS SANKET narratives (2016–2022) record ${m.other.length} other fatal accident${m.other.length===1?"":"s"} here (${[...cg.entries()].map(([k,n])=>`${esc(k)} ${n}`).join(", ")}); they are not explosions and are not shown as explosion evidence.`:""}</p></div></div>`;
+  } else {
+    body+=`<div class="empty card reveal">${icon("Other causes")}<div><p><b>No historical accident record for this mine in the available datasets</b> (SANKET coal and non-coal records, 1901–2022). It appears only in a reference book; what the book contains is listed below.</p></div></div>`;
+  }
+  if(m.excluded.length) body+=`<div class="block reveal"><div class="sec-h"><h2>Reviewed but not counted as explosions</h2></div>
+    ${m.excluded.map(e=>`<div class="bk"><b>${esc(e.id)} · ${esc(e.date)}</b><span>Cause as recorded: “${esc(e.cause_label)}” · ${e.killed??NA} killed · SANKET workbook category: ${esc(e.category)}</span><span>Reason given in the workbook: ${esc(e.reason||NA)}</span></div>`).join("")}</div>`;
+  body+=msBooks(m,H);
+  out.innerHTML=head+body;
+  if(H.length) makePager("mx",H.map(h=>({h,score:null})),x=>xCaseHTML(x,null),"records","");
+  out.querySelectorAll(".mo").forEach(b=>b.onclick=()=>msProfile(MBY[b.dataset.k],[]));
+  out.querySelector(".mhead")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+function msMeasures(m,H){
+  // 1. findings from this mine's own DGMS enquiries; 2. book guidance for the mechanisms documented here (general, not about this mine)
+  const own=H.filter(h=>h.findings&&h.findings.length);
+  const mechs=[...new Set(H.map(h=>h.xcat))].filter(c=>X.taxonomy.includes(c));
+  const ids=new Set(H.map(h=>h.id)), mt=H[0]?.mine_type||"";
+  const gs=X.guidance.filter(g=>g.mechanisms.some(c=>mechs.includes(c))&&(!g.context||new RegExp("\\b(?:"+g.context+")","i").test(mt+" "+H.map(h=>h.mineral+" "+h.situation).join(" "))))
+    .map(g=>({g,here:g.links.filter(l=>ids.has(l[0])).length,st:g.refs.filter(r=>r.support==="states").length})).sort((a,b)=>b.here-a.here||b.st-a.st).slice(0,6);
+  let h=`<div class="block reveal"><div class="sec-h"><h2>Preventive measures</h2><span class="sub">${mechs.length?mechs.map(MECH).map(esc).join(" · "):"no mechanism documented"}</span></div>`;
+  h+= own.length? `<p class="glabel">Historical findings at this mine (DGMS enquiry)</p><ol class="acts">${own.map((r,i)=>`<li class="act card"><span class="num">${i+1}</span><div class="t">${esc(r.id)} (${esc(String(r.year))}, ${esc(MECH(r.xcat))}): the accident could have been averted had…
+      <ul class="lessons">${r.findings.map(f=>`<li>${esc(f)}</li>`).join("")}</ul><div class="gtags"><span class="prov hist">Historical finding — DGMS</span><span class="prov src">${esc(r.doc)}, PDF p.${esc(String(r.pdf_page))}</span></div></div></li>`).join("")}</ol>`
+    : `<p class="partial">No DGMS enquiry findings are recorded for this mine's explosion records${H.some(h=>h.kind==="list")?" (major-accident list rows carry only a cause label)":""}.</p>`;
+  if(gs.length) h+=`<p class="glabel">General reference guidance for the documented mechanism${mechs.length>1?"s":""} — the books do not discuss this mine</p><ol class="acts">${gs.map(({g},i)=>guidanceCard(g,i,mechs[0],ids)).join("")}</ol>`;
+  else if(mechs.length) h+=`<p class="partial">Neither reference book gives guidance for ${mechs.map(MECH).map(esc).join(" or ")}${mechs.some(c=>/Blasting/.test(c))?". "+esc(X.uncovered_by_books):"."}</p>`;
+  else h+=`<p class="partial">No verified mine-specific preventive measure can be established: the records here do not identify the explosion mechanism.</p>`;
+  return h+`</div>`;
+}
+function msBooks(m,H){
+  const T={Ramlu:"Ramlu, Mine Disasters and Mine Rescue",Cheng:"Cheng, Explosions in Underground Coal Mines"};
+  if(!m.book.length) return `<div class="block reveal"><div class="sec-h"><h2>Reference books</h2></div><p class="partial">This mine's name was not found in either reference book (${esc(T.Ramlu)}; ${esc(T.Cheng)}).</p></div>`;
+  return `<div class="block reveal"><div class="sec-h"><h2>Reference books</h2><span class="sub">Page references only; the book text is not reproduced</span></div>
+    ${m.book.map(b=>{ const yr=b.year_near&&H.find(h=>String(h.year)===b.year_near);
+      return `<div class="bk"><b>${esc(T[b.book])}, printed p.${esc(b.printed_page)}${b.page_exact?"":" (approximate: read from neighbouring pages)"}</b>
+      <span>${b.as_mine?`Named as a mine or colliery (matched “${esc(b.matched)}”).`:`The name “${esc(b.matched)}” appears in a passage about mines; the book does not identify the mine further.`}${m.sector!=="book"?" Matched by name only; check the page before treating it as the same mine.":""}</span>
+      ${b.year_near?`<span>Year printed next to the name: ${esc(b.year_near)}${yr?` — matches record ${esc(yr.id)} (${esc(String(yr.year))}, ${esc(MECH(yr.xcat))})`:H.length?" — no record of this mine has that year":""}.</span>`:""}
+      ${b.topics.length?`<span>Topics in the surrounding text: ${b.topics.map(esc).join(", ")}.</span>`:""}</div>`; }).join("")}</div>`;
+}
+if(MD){ $("msList").innerHTML=[...new Set(MD.mines.map(m=>m.name))].map(n=>`<option value="${esc(n)}">`).join("");
+  $("msForm").addEventListener("submit",e=>{ e.preventDefault(); msRun(); }); }
+
 function setView(v){
   const c=v==="causes";
   document.querySelectorAll(".views [role=tab]").forEach(b=>{ const on=b.dataset.view===v; b.setAttribute("aria-selected",String(on)); b.tabIndex=on?0:-1; });
-  document.querySelector("main").hidden=c; $("causes").hidden=!c;
+  document.querySelector("main").hidden=v!=="advisor"; $("causes").hidden=!c; $("mines").hidden=v!=="mines";
   if(c) czRender();
-  try{ history.replaceState(null,"",c?"#causes":location.pathname+location.search); }catch{}
+  try{ history.replaceState(null,"",v==="advisor"?location.pathname+location.search:"#"+v); }catch{}
 }
 czInitYears();
 document.querySelectorAll(".views [role=tab]").forEach(b=>{ b.onclick=()=>setView(b.dataset.view);
   b.onkeydown=e=>{ const tabs=[...document.querySelectorAll(".views [role=tab]")], i=tabs.indexOf(b);
     const j=e.key==="ArrowRight"?(i+1)%tabs.length:e.key==="ArrowLeft"?(i-1+tabs.length)%tabs.length:e.key==="Home"?0:e.key==="End"?tabs.length-1:-1;
     if(j<0) return; e.preventDefault(); setView(tabs[j].dataset.view); tabs[j].focus(); }; });
-window.addEventListener("hashchange",()=>setView(location.hash==="#causes"?"causes":"advisor"));
+window.addEventListener("hashchange",()=>setView(location.hash==="#causes"?"causes":location.hash==="#mines"?"mines":"advisor"));
 ["czMt","czPlace","czYear","czDim"].forEach(id=>$(id).addEventListener("change",()=>{ if(id==="czDim") CZ.sel=null; czRender(); }));
 document.querySelectorAll("[data-cv]").forEach(b=>b.onclick=()=>{ CZ.view=b.dataset.cv; document.querySelectorAll("[data-cv]").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); czRender(); });
 document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{ CZ.scale=b.dataset.sc; czRender(); });
-if(location.hash==="#causes") setView("causes");
+if(location.hash==="#causes") setView("causes"); else if(location.hash==="#mines") setView("mines");
 $("f").addEventListener("submit",e=>{e.preventDefault();submit();});
 $("q").value=""; $("place").value=""; $("mt").value="";
 idle();

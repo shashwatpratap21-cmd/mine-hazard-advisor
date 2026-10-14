@@ -186,6 +186,30 @@ details.more summary:hover{color:var(--text)}
 .notice{padding:var(--s3) var(--s4);border-radius:var(--r);border:1px solid rgba(242,181,68,.3);background:rgba(242,181,68,.06);color:var(--text-2);font-size:.98rem}
 .notice b{color:var(--text)}
 .partial{margin:0;color:var(--text-2);font-size:.95rem}
+/* technical data from the PDF */
+.pdt{display:grid;gap:var(--s2);margin:0;padding:0;list-style:none}
+.pdi{padding:var(--s3) var(--s4);display:grid;gap:6px}
+.pdi .ph{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.pdi .pn{font-weight:600;color:var(--text)}
+.pdi .pv{font:600 1rem/1.45 var(--mono);color:var(--amber-hi);overflow-wrap:anywhere}
+.pdi .pr{margin:0;color:var(--text-2);font-size:.95rem}
+#pdt .pp{font-size:.86rem;color:var(--text-3)}
+.pdi .pu{color:var(--text-2);font-weight:500}
+.pc-f{margin:var(--s2) 0 0;font:500 .95rem/1.45 var(--mono);color:var(--text-2);overflow-wrap:anywhere}
+.pdi .ev p{font-family:var(--body);font-size:.9rem}
+.ptag{font:600 .72rem/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-2);white-space:nowrap}
+.ptag.calc{color:var(--amber-hi);border-color:rgba(242,181,68,.45)}
+.ptag.flag{color:var(--red);border-color:rgba(242,102,95,.45)}
+.pcalc{padding:var(--s3) var(--s4)}
+.pcalc>summary{cursor:pointer;font-weight:600;color:var(--text)}
+.pc-in{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--s2);margin:var(--s2) 0}
+.pc-in label{display:grid;gap:4px;font-size:.88rem;color:var(--text-2)}
+.pc-in input{font:inherit;font-size:1rem;color:var(--text);background:var(--inset);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:9px 12px;width:100%;min-width:0}
+.pc-in input:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+.pc-out{font-size:.95rem;color:var(--text-2);display:grid;gap:4px}
+.pc-out p{margin:0}
+.pc-out .res{font:600 1.05rem/1.45 var(--mono);color:var(--amber-hi)}
+.pc-out .nc{color:var(--text-3)}
 .pager{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s1)}
 .pager .pg{color:var(--text-2);font-size:.95rem;text-align:center;flex:1}
 .empty>div{min-width:0}
@@ -410,6 +434,8 @@ form .field>.label{color:var(--text-2)}
 <script id="mdata" type="application/json">__MDATA__</script>
 <script id="data" type="application/json">__DATA__</script>
 <script id="xdata" type="application/json">__XDATA__</script>
+<script id="pdata" type="application/json">__PDATA__</script>
+<script>/*__PCALC__*/</script>
 <script>
 const D = JSON.parse(document.getElementById("data").textContent);
 const STOP = new Set(D.stop);
@@ -1077,6 +1103,80 @@ function explosionPanel(xa, pct){
     </div>`;
 }
 
+// ----- Relevant Technical Data from the PDF (data/pdf_technical_data.json, pdf_calc.js) -----
+let PD=null;
+try{ PD=JSON.parse(document.getElementById("pdata").textContent); if(!Array.isArray(PD.entries)) throw new Error("no entries"); }
+catch(e){ PD=null; console.error("[Mine Hazard Advisor] PDF technical data not loaded:", e); }
+const PD_GROUP={calculation:["Calculation","calc"],reference:["Reference value",""],design:["Design specification",""]};
+const pdPage=e=>`PDF p.${e.pdf_page} (printed ${esc(e.printed_page)}) · ${esc(e.section)}`;
+function pdItemHTML({e,matched}){
+  const [g,gc]=PD_GROUP[e.group];
+  const why=e.relevance+(matched?` Shown because your description mentions “${matched}”.`:"");
+  return `<li class="pdi card" data-pid="${e.id}">
+    <div class="ph"><span class="ptag ${gc}">${g}</span>${e.status==="flagged"?`<span class="ptag flag">Flagged for review</span>`:""}<span class="pn">${esc(e.parameter)}</span></div>
+    <div class="pv">${esc(e.value)}${e.unit?` <span class="pu">${esc(e.unit)}</span>`:""}</div>
+    <p class="pr">${esc(why)}</p>
+    <span class="pp">${pdPage(e)}</span>
+    <details class="ev"><summary>Conditions and limits</summary><p>${esc(e.conditions)}</p><p><b>Use:</b> ${esc(e.applicability)}</p><p><b>Limits:</b> ${esc(e.limitations)}${e.flag?` <b>Flag:</b> ${esc(e.flag)}`:""}${e.note?` ${esc(e.note)}`:""}</p></details>
+  </li>`;
+}
+function pdCalcHTML(c){
+  const spec=PD.calculators[c.name], uses=spec.uses.map(id=>PD.entries.find(e=>e.id===id)).filter(Boolean);
+  const pages=[...new Set(uses.map(e=>`p.${e.pdf_page}`))].join(", "), eq=uses.find(e=>e.group==="calculation");
+  const inputs=c.name==="leChatelier"
+    ? [0,1,2].map(i=>`<label>Gas ${i+1}<input type="text" data-k="name${i}" autocomplete="off" placeholder="name"></label><label>Share (%)<input type="text" inputmode="decimal" data-k="p${i}" autocomplete="off"></label><label>Lower limit (%)<input type="text" inputmode="decimal" data-k="l${i}" autocomplete="off"></label>`).join("")
+    : spec.inputs.map(f=>`<label>${esc(f.label)} (${esc(f.unit)})<input type="text" inputmode="decimal" data-k="${f.k}" autocomplete="off" value="${c.prefill&&c.prefill[f.k]!=null?esc(c.prefill[f.k]):""}"></label>`).join("");
+  return `<details class="pcalc card" data-calc="${c.name}"${c.open?" open":""}><summary>${esc(spec.title)} <span class="ptag calc">Calculation</span></summary>
+    ${c.prefill?`<p class="partial">The methane figure was taken from your description. Use it only if it is a measured reading.</p>`:""}
+    ${eq?`<p class="pc-f">${esc(eq.value)}</p><p class="partial">${esc(eq.conditions)}</p>`:""}
+    <div class="pc-in">${inputs}</div>
+    <div class="pc-out" aria-live="polite"></div>
+    <span class="pp">${eq?"Equation":"Reference values"} from the PDF (${pages}); the result is calculated by this app from your inputs.</span>
+  </details>`;
+}
+function pdCompute(box){
+  const name=box.dataset.calc, raw={}; box.querySelectorAll("input[data-k]").forEach(i=>raw[i.dataset.k]=i.value);
+  const f=PDFCALC.fmt;
+  let r;
+  if(name==="leChatelier") r=PDFCALC.leChatelier([0,1,2].map(i=>({name:raw["name"+i],p:raw["p"+i],l:raw["l"+i]})));
+  else r=PDFCALC[name](raw);
+  const out=box.querySelector(".pc-out");
+  if(!r.ok){
+    out.innerHTML=`<p class="nc"><b>Not calculated.</b> ${r.missing.length?`Needs measured ${r.missing.map(esc).join(", ")}.`:""}${r.errors.length?` ${r.errors.map(esc).join(" ")}`:""} No value is assumed for a missing input.</p>`;
+    box.dataset.state=r.errors.length?"invalid":"missing"; return r;
+  }
+  const ins=name==="leChatelier"?r.inputs.map(c=>`${esc(c.name)} ${f(c.p)} % (limit ${f(c.l)} %)`).join("; ")
+    :Object.entries(r.inputs).map(([k,v])=>`${k} = ${f(v)} ${esc((PD.calculators[name].inputs.find(i=>i.k===k)||{}).unit||"")}`).join(", ");
+  let res;
+  if(name==="methanePosition") res=`<p class="res">${f(r.value)} % CH₄</p><p>${esc(r.text)}${r.stoich?" "+esc(r.stoich):""}</p>`;
+  else if(name==="gasEmissionIndex") res=`<p class="res">q = ${f(r.value)} m³ CH₄/t → Degree ${r.degree}</p><p>Methane emitted: ${f(r.daily)} m³/d before the K correction.</p>`;
+  else if(name==="layeringIndex") res=`<p class="res">S = ${f(r.value)}</p><p>${esc(r.text)}</p>`;
+  else res=`<p class="res">L = ${f(r.value)} %</p><p>Estimated lower flammable limit of the mixture.</p>`;
+  out.innerHTML=`${res}<p>Formula: ${esc(r.formula)}${r.working?` = ${esc(r.working)}`:""}</p><p>Inputs: ${ins}</p>${r.notes.map(n=>`<p>${esc(n)}</p>`).join("")}`;
+  box.dataset.state="ok"; return r;
+}
+function pdfBlock(xa, text, mt){
+  if(!PD||typeof PDFCALC==="undefined") return "";
+  const sel=PDFCALC.select(PD,{cats:[xa.cls.top.cat, xa.cls.ambiguous?xa.cat2:null],text,mt});
+  xa.pdf=sel;
+  if(!sel.items.length&&!sel.calcs.length) return "";
+  // an equation with its own calculator below is not repeated as a list item
+  const calcUses=new Set(sel.calcs.flatMap(c=>PD.calculators[c.name].uses.filter(id=>PD.entries.find(e=>e.id===id).group==="calculation")));
+  const items=sel.items.filter(i=>!calcUses.has(i.e.id));
+  const shown=items.slice(0,5), more=items.slice(5);
+  const ctxNote=sel.ctx==="unknown"&&sel.items.some(i=>i.e.sector==="coal")?" Most of these values are for coal mines; the mine type is not stated."
+    :sel.ctx==="noncoal"?" The PDF's coal-mine values (gassiness, coal dust, barriers) are not applied to metal or non-coal mines and processing plants.":"";
+  return `<div class="block" id="pdt">
+    <div class="sec-h reveal"><h2>Relevant Technical Data from the PDF</h2><span class="sub">Mine Explosions (AMIE Study Circle)</span></div>
+    <p class="partial reveal">General values from the PDF, not measurements at your site.${ctxNote}</p>
+    ${shown.length?`<ul class="pdt reveal">${shown.map(pdItemHTML).join("")}</ul>`:""}
+    ${more.length?`<details class="more reveal"><summary>${more.length} more value${more.length===1?"":"s"} from the PDF</summary><ul class="pdt" style="margin-top:12px">${more.map(pdItemHTML).join("")}</ul></details>`:""}
+    ${sel.calcs.length?`<div class="pdt reveal">${sel.calcs.map(pdCalcHTML).join("")}</div>`:""}
+  </div>`;
+}
+function wirePdf(){ document.querySelectorAll("#pdt .pcalc").forEach(pdCompute); }
+document.addEventListener("input",e=>{ const box=e.target.closest&&e.target.closest("#pdt .pcalc"); if(box) pdCompute(box); });
+
 function measuresHTMLBlock(top, note){
   const acts=top.length?topMeasures(top).map((m,i)=>`
     <li class="act card"><span class="num" aria-hidden="true">${i+1}</span><span class="t">${esc(m.text)}</span>
@@ -1142,7 +1242,8 @@ function run(opts={}){
         <div class="btns" style="margin-top:12px">${place||mt?`<button type="button" class="btn2" id="broaden">Search all places and mine types</button>`:""}<button type="button" class="btn2" id="allacc">Search all DGMS accidents</button></div></div></div></div>`;
     const synBlock = xa.syn.matches.length ? listBlock("sx","Synthetic training scenarios", `<p class="partial">Generated examples from ${esc(X.source)}. They are <b>not</b> DGMS accidents, did not happen, and are never counted as evidence. Place-of-work filters are not applied to them because their work-area context is broad.</p>`) :
       `<div class="block"><div class="sec-h reveal"><h2>Synthetic training scenarios</h2><span class="sub">None found</span></div><p class="partial">No synthetic scenario matches this description${mt?` for ${esc(mtLabel(mt))}`:""}.</p></div>`;
-    out.innerHTML = relaxedNote + explosionPanel(xa,pct) + (unclear?"":hazardPanel(hz,probs,unclear,pct)) + xMeasuresBlock(xa.cls.top.cat, text, top, mt, xa.cat2) + histBlock + synBlock;
+    out.innerHTML = relaxedNote + explosionPanel(xa,pct) + (unclear?"":hazardPanel(hz,probs,unclear,pct)) + xMeasuresBlock(xa.cls.top.cat, text, top, mt, xa.cat2) + pdfBlock(xa, text, mt) + histBlock + synBlock;
+    wirePdf();
     if(xa.hist.matches.length) makePager("hx", xa.hist.matches, m=>xCaseHTML(m,xa.hist.qv), "historical explosion records", `(from ${xa.hist.eligible} SANKET explosion records ${place||mt?"in these filters":"(coal and non-coal)"})`);
     if(xa.syn.matches.length) makePager("sx", xa.syn.matches, synHTML, "synthetic scenarios", `(from ${xa.syn.eligible}${mt?` for ${mtLabel(mt)}`:""})`);
   } else {

@@ -37,6 +37,10 @@ Methane / Firedamp · Coal-Dust · Combined Methane and Coal-Dust · Blasting an
 
 The 87 SANKET explosion records fall under Blasting (42), Methane / Firedamp (22), Coal-Dust (1) and Metal Mine (1), plus records whose type DGMS did not record (10 gas or coal dust, 6 explosion) and five outside the taxonomy (hydrocarbon/vapour in a vessel, gas cylinder). No historical record is classified as Combined, Electrical/Mechanical Ignition or Spontaneous Heating; for those the site says so and shows related records. Combustible non-coal dust (for example in ore-processing plants) falls under the Metal Mine class; no historical SANKET record and neither book covers it, so the site shows related dust-explosion records as context and an insufficient-evidence notice rather than general advice (see the 14 October update in [`reports/final_audit.md`](reports/final_audit.md)).
 
+## Technical data from the *Mine Explosions* PDF
+
+For explosion analyses the results include **Relevant Technical Data from the PDF**: values, equations and design specifications extracted from the AMIE Study Circle *Mine Explosions* notes (40 entries in [`data/pdf_technical_data.json`](data/pdf_technical_data.json), each with its PDF page). Only the entries that fit the analysed mechanism, mine type and wording are shown; coal-mine values are never applied to metal mines or processing plants. Four calculators (methane against the flammable range, gas-emission index and Indian degree of gassiness, Middendorf layering index, Le Chatelier) run only on measured values typed in by the user. Source checks, flagged wording, retrieval rules and tests: [`reports/pdf_technical_data.md`](reports/pdf_technical_data.md). Tests: `node tests/test_pdf_calc.js` and `NODE_PATH=$(npm root -g) node tests/ui_pdf.js`.
+
 ## Models and evaluation
 
 Mine / colliery search (sources, matching method, real-name tests, reconciliation): [`reports/mine_search.md`](reports/mine_search.md). The 25-situation validation (inputs, actual outputs, source checks and fixes) is in [`reports/validation_25.md`](reports/validation_25.md) with the full table in [`reports/validation_25.csv`](reports/validation_25.csv). See [`reports/explosion_evaluation.md`](reports/explosion_evaluation.md) for every number and the full source/guidance tables, and [`reports/explosion_validation.md`](reports/explosion_validation.md) for the 10-case validation run.
@@ -52,7 +56,7 @@ pip install pandas scikit-learn openpyxl
 python build_model.py                              # DGMS hazard classifier + search index -> model/model.json
 python build_explosion.py   # --workbook / --sanket / --guidance PATHS (or EXPLOSION_WORKBOOK, SANKET_EXPLOSION_WORKBOOK, REFERENCE_GUIDANCE); validates, trains, evaluates -> model/explosion.json + reports
 python build_mines.py                              # mine / colliery search index -> model/mines.json
-python build_site.py                               # template.html + model files -> index.html
+python build_site.py                               # template.html + model files + data/pdf_technical_data.json + pdf_calc.js -> index.html
 # optional, needs the two reference books locally:
 # python tools/build_book_mines.py --ramlu-ocr DIR --cheng-pdf FILE  -> data/book_mine_mentions.json
 ```

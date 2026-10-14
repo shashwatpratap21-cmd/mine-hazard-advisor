@@ -1,0 +1,1216 @@
+{
+ "source": {
+  "title": "Mine Explosions (Mine Ventilation and Environmental Hazards), AMIE Study Circle",
+  "file": "5_explosion.pdf",
+  "sha256": "afb3b7308fa15d4a94ebbbe756c32a40217e11d8db34a616df2fd265115a8689",
+  "pdf_pages": 19,
+  "page_note": "pdf_page is the page number in the PDF file; printed_page is the footer number (n/17). PDF page = footer page + 1.",
+  "verification": "Every value was checked against the rendered PDF page image, not only extracted text."
+ },
+ "groups": {
+  "calculation": "Quantitative calculation: an equation that gives a result only when every input is supplied as a measured value in the stated unit.",
+  "reference": "Reference value or range: explains a hazard but does not by itself show that an explosion will occur.",
+  "design": "Engineering design specification: describes a protective system; compliance cannot be judged without site measurements and the applicable standard."
+ },
+ "entries": [
+  {
+   "id": "M01",
+   "group": "reference",
+   "parameter": "Flammable range of methane in air",
+   "value": "≈5 (33 g/m³) to ≈15 (100 g/m³)",
+   "unit": "% CH₄ by volume",
+   "num": {
+    "lo": 5,
+    "hi": 15
+   },
+   "conditions": "Methane-air mixtures; lower (LFL) and upper (UFL) flammable limits, both stated as approximate. Explosions at the limits are weak; at the stoichiometric concentration most violent.",
+   "inputs": [],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "gas",
+   "pdf_page": 2,
+   "printed_page": "1/17",
+   "section": "Firedamp; Limits of flammability",
+   "applicability": "Reference only. Comparing a measured methane reading with this range needs the reading itself.",
+   "limitations": "Approximate limits. The LFL falls when airborne coal dust is present (M05). Statutory action limits are not given in this PDF.",
+   "relevance": "A methane accumulation can explode only while the mixture lies inside this range and meets an ignition source.",
+   "status": "verified",
+   "base": [
+    "methane"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "M02",
+   "group": "reference",
+   "parameter": "Stoichiometric methane concentration",
+   "value": "9.5",
+   "unit": "% CH₄ by volume",
+   "num": {
+    "value": 9.5
+   },
+   "conditions": "Above 9.5 % oxygen is insufficient for complete combustion; below it oxygen is in excess. Flame temperature is highest at this concentration (PDF p.3).",
+   "inputs": [],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "gas",
+   "pdf_page": 2,
+   "printed_page": "1/17",
+   "section": "Firedamp",
+   "applicability": "Reference only.",
+   "limitations": "Describes the mixture, not the conditions at a particular site.",
+   "relevance": "The most violent firedamp explosions occur near this concentration.",
+   "status": "verified",
+   "base": [
+    "methane"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "M03",
+   "group": "reference",
+   "parameter": "Air needed to burn methane completely",
+   "value": "1 volume CH₄ : 2 volumes O₂, or 10 volumes of air",
+   "unit": "volume ratio",
+   "num": {
+    "air": 10,
+    "o2": 2
+   },
+   "conditions": "From CH₄ + 2(O₂ + 4N₂) = CO₂ + 2H₂O + 8N₂.",
+   "inputs": [],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "gas",
+   "pdf_page": 2,
+   "printed_page": "1/17",
+   "section": "Firedamp",
+   "applicability": "Reference only.",
+   "limitations": "Idealised reaction.",
+   "relevance": "Explains why 9.5 % (1 part in about 10.5) is the stoichiometric mixture.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:oxygen|combustion|stoichiometric)\\b"
+  },
+  {
+   "id": "M04",
+   "group": "calculation",
+   "parameter": "Le Chatelier relation: lower flammable limit of a gas mixture",
+   "value": "100 / L = p₁/l₁ + p₂/l₂ + p₃/l₃ + …",
+   "unit": "%",
+   "num": null,
+   "conditions": "p₁, p₂ … are the percentages of each combustible gas in the mixture (summing to 100); l₁, l₂ … their lower flammable limits; L the lower limit of the mixture.",
+   "inputs": [
+    "p (%) of each component, summing to 100",
+    "l (%) lower flammable limit of each component"
+   ],
+   "mechanism": [
+    "methane",
+    "sealed"
+   ],
+   "sector": "gas",
+   "pdf_page": 3,
+   "printed_page": "2/17",
+   "section": "Le Chatelier relation",
+   "applicability": "Calculation only when the composition and every component's lower limit are supplied.",
+   "limitations": "The PDF gives a lower limit only for methane (≈5 %, M01); the limits of other gases must come from another reliable source.",
+   "relevance": "Ethane, carbon monoxide or hydrogen mixed with methane lower the limit of the mixture.",
+   "status": "verified",
+   "calc": "leChatelier",
+   "base": [
+    "sealed"
+   ],
+   "triggers": "\\b(?:ethane|hydrogen|carbon monoxide|fire gas(?:es)?|gas mixture|mixture of gases)\\b"
+  },
+  {
+   "id": "M05",
+   "group": "reference",
+   "parameter": "Effect of oxygen and airborne coal dust on the methane LFL",
+   "value": "Independent of O₂ above 20 %; falls linearly from 5 % to zero as airborne coal-dust concentration rises",
+   "unit": "% CH₄ / % O₂",
+   "num": {
+    "o2_above": 20,
+    "lfl_from": 5,
+    "lfl_to": 0
+   },
+   "conditions": "Methane-air mixtures with airborne coal dust.",
+   "inputs": [],
+   "mechanism": [
+    "methane",
+    "coal_dust",
+    "combined"
+   ],
+   "sector": "coal",
+   "pdf_page": 3,
+   "printed_page": "2/17",
+   "section": "Le Chatelier relation (following paragraph)",
+   "applicability": "Reference only. The PDF gives no dust concentration at which the LFL reaches zero.",
+   "limitations": "Qualitative slope only; no numbers for the dust concentration.",
+   "relevance": "Where coal dust is airborne, methane below 5 % can still take part in an explosion.",
+   "status": "verified",
+   "base": [
+    "combined"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "M06",
+   "group": "reference",
+   "parameter": "Inert-gas damping",
+   "value": "CO₂ is more effective than N₂",
+   "unit": "",
+   "num": null,
+   "conditions": "Inerting of flammable mixtures.",
+   "inputs": [],
+   "mechanism": [
+    "methane",
+    "sealed"
+   ],
+   "sector": "gas",
+   "pdf_page": 3,
+   "printed_page": "2/17",
+   "section": "Inert gases damping",
+   "applicability": "Reference only.",
+   "limitations": "No quantities are given.",
+   "relevance": "Relevant when sealed or fire areas are inerted.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:inert\\w*|nitrogen|carbon dioxide|co2)\\b"
+  },
+  {
+   "id": "M07",
+   "group": "reference",
+   "parameter": "Ignition temperature of pure methane in oxygen",
+   "value": "550",
+   "unit": "°C",
+   "num": {
+    "value": 550
+   },
+   "conditions": "Pure methane in oxygen, not in mine air.",
+   "inputs": [],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "gas",
+   "pdf_page": 3,
+   "printed_page": "2/17",
+   "section": "Ignition temperature",
+   "applicability": "Reference only.",
+   "limitations": "Not the value for firedamp-air mixtures (see M08).",
+   "relevance": "Lower than the firedamp-air value; shown only when oxygen enrichment is mentioned.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:oxygen|pure methane)\\b"
+  },
+  {
+   "id": "M08",
+   "group": "reference",
+   "parameter": "Ignition temperature of flammable firedamp-air mixtures",
+   "value": "650 to 750",
+   "unit": "°C",
+   "num": {
+    "lo": 650,
+    "hi": 750
+   },
+   "conditions": "An ignition lag (induction time) elapses before ignition; it depends on temperature, pressure, gas concentration and other combustible gases.",
+   "inputs": [],
+   "mechanism": [
+    "methane",
+    "electrical"
+   ],
+   "sector": "gas",
+   "pdf_page": 3,
+   "printed_page": "2/17",
+   "section": "Ignition temperature",
+   "applicability": "Reference only. A source hotter than this does not always ignite the gas because of the ignition lag.",
+   "limitations": "No surface or spark temperature at the site is known from a description.",
+   "relevance": "Hot surfaces, frictional sparks and flames can reach this range.",
+   "status": "verified",
+   "base": [
+    "methane"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "M09",
+   "group": "reference",
+   "parameter": "Maximum explosion pressure of a methane-air mixture",
+   "value": "7.2",
+   "unit": "bar",
+   "num": {
+    "value": 7.2
+   },
+   "conditions": "Closed vessel, 760 mm Hg and 20 °C.",
+   "inputs": [],
+   "mechanism": [
+    "methane",
+    "sealed"
+   ],
+   "sector": "gas",
+   "pdf_page": 3,
+   "printed_page": "2/17",
+   "section": "Explosion characteristics",
+   "applicability": "Reference only.",
+   "limitations": "Closed-vessel laboratory value; pressures in mine roadways differ.",
+   "relevance": "Indicates the pressure that seals and explosion-proof stoppings must resist.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:pressure|seal\\w*|stopping\\w*|confine\\w*|enclos\\w*)\\b"
+  },
+  {
+   "id": "M10",
+   "group": "reference",
+   "parameter": "Flame length of an ignited gas zone",
+   "value": "Increases up to ≈12 % CH₄, then decreases; ≈4.5 at 9.5 %, ≈5 at 12 %",
+   "unit": "× gas-zone length (total flame length)",
+   "num": {
+    "at9_5": 4.5,
+    "at12": 5,
+    "peak": 12
+   },
+   "conditions": "For a given roadway cross-section; the PDF calls the data limited.",
+   "inputs": [],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "gas",
+   "pdf_page": 3,
+   "printed_page": "2/17 to 3/17",
+   "section": "Explosion characteristics: flame length",
+   "applicability": "Reference only. Not used as a calculation: only two concentrations are given and the app does not interpolate.",
+   "limitations": "Limited data according to the PDF itself. The flame-velocity heading on p.4 carries no value.",
+   "relevance": "A burning accumulation reaches several times beyond the gas zone itself.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:accumulat\\w*|pocket|cavity|layer\\w*|flame|heading|zone)\\b"
+  },
+  {
+   "id": "M11",
+   "group": "calculation",
+   "parameter": "Gas-emission index",
+   "value": "q = c × 60 × 24 × Q_air / (100 × O × K) = c × 14.4 × Q_air / (O × K)",
+   "unit": "m³ CH₄/t",
+   "num": {
+    "factor": 14.4
+   },
+   "conditions": "c methane in the return air current (vol %); Q_air return air quantity (m³/min); O mined or saleable output (t/d); K = maximum methane concentration on any day in a week ÷ average concentration in the week.",
+   "inputs": [
+    "c (% CH₄)",
+    "Q_air (m³/min)",
+    "O (t/d)",
+    "K (–)"
+   ],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "coal",
+   "pdf_page": 4,
+   "printed_page": "3/17 to 4/17",
+   "section": "Estimation of firedamp hazard",
+   "applicability": "Calculation only with measured return-air methane, air quantity and output.",
+   "limitations": "Dimensions check: c/100 × Q_air × 1440 min/d gives m³ CH₄/d; ÷ O gives m³/t. No value is assumed for any input.",
+   "relevance": "The PDF uses it to rate the gassiness of a coal mine (M13).",
+   "status": "verified",
+   "calc": "gasEmissionIndex",
+   "base": [],
+   "triggers": "\\b(?:gassy|gassiness|degree\\s+(?:i{1,3}|[123])|emission|return air|output|production|air quantity)\\b"
+  },
+  {
+   "id": "M12",
+   "group": "reference",
+   "parameter": "Factor K in the gas-emission index",
+   "value": "1 to 2; 1.5 to 2 for mechanised faces",
+   "unit": "–",
+   "num": {
+    "lo": 1,
+    "hi": 2,
+    "mech_lo": 1.5,
+    "mech_hi": 2
+   },
+   "conditions": "Ratio of the weekly maximum daily methane concentration to the weekly average; varies with the degree of mechanisation.",
+   "inputs": [],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "coal",
+   "pdf_page": 5,
+   "printed_page": "4/17",
+   "section": "Estimation of firedamp hazard",
+   "applicability": "Reference for the K input of M11.",
+   "limitations": "The app does not pick a K for the user.",
+   "relevance": "Needed with M11.",
+   "status": "verified",
+   "base": [],
+   "triggers": null,
+   "with": "M11"
+  },
+  {
+   "id": "M13",
+   "group": "reference",
+   "parameter": "Indian classification of coal-mine gassiness",
+   "value": "Degree I < 1; Degree II 1–10; Degree III > 10",
+   "unit": "m³ CH₄/t output",
+   "num": {
+    "I_below": 1,
+    "III_above": 10
+   },
+   "conditions": "Classification by gas-emission index.",
+   "inputs": [],
+   "mechanism": [
+    "methane"
+   ],
+   "sector": "coal",
+   "pdf_page": 5,
+   "printed_page": "4/17",
+   "section": "Indian Classification",
+   "applicability": "Reference; the degree of a mine is calculated only from a gas-emission index computed with measured inputs.",
+   "limitations": "As printed in the PDF; not checked against current regulations. The table prints 1–10, so 1 and 10 are read as Degree II.",
+   "relevance": "Tells how gassy a coal seam or mine is rated.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:gassy|gassiness|degree\\s+(?:i{1,3}|[123]))\\b"
+  },
+  {
+   "id": "M14",
+   "group": "reference",
+   "parameter": "Coward triangle: oxygen below which no mixture is explosive by itself",
+   "value": "≈12.1 (normal air 20.93 % O₂)",
+   "unit": "% O₂",
+   "num": {
+    "value": 12.1,
+    "air": 20.93
+   },
+   "conditions": "Methane-air and fire-gas mixtures plotted on the Coward diagram; used before recovering a sealed-off area.",
+   "inputs": [],
+   "mechanism": [
+    "sealed",
+    "methane"
+   ],
+   "sector": "coal",
+   "pdf_page": 11,
+   "printed_page": "10/17",
+   "section": "Flammability of atmosphere in sealed-off areas; Coward analyses",
+   "applicability": "Reference only. Needs a gas analysis of the sealed atmosphere.",
+   "limitations": "A mixture below this oxygen level can still become flammable when mixed with air.",
+   "relevance": "Shows when sealed fire gases can become explosive once air is admitted.",
+   "status": "verified",
+   "base": [
+    "sealed"
+   ],
+   "triggers": "\\b(?:sealed|seal(?:ing)?|unseal\\w*|re-?open\\w*|fire area|goaf|goaves|fire gas(?:es)?)\\b"
+  },
+  {
+   "id": "V01",
+   "group": "calculation",
+   "parameter": "Middendorf layering index",
+   "value": "S = ∛( 24 v² / (c √F) )",
+   "unit": "index (no unit given)",
+   "num": {
+    "limit": 2
+   },
+   "conditions": "v mean air velocity (m/s); c mean methane content of the air current (% CH₄); F cross-sectional area of the airway at the measuring station (m²). S < 2: probable danger of methane layering; S > 2: no danger. S = 2 is not classified by the stated rule.",
+   "inputs": [
+    "v (m/s)",
+    "c (% CH₄)",
+    "F (m²)"
+   ],
+   "mechanism": [
+    "methane",
+    "ventilation"
+   ],
+   "sector": "coal",
+   "pdf_page": 8,
+   "printed_page": "7/17",
+   "section": "Measures against accumulation of firedamp",
+   "applicability": "Calculation only with measured v, c and F at one measuring station.",
+   "limitations": "The PDF says a correction factor must be used for a rising airway and a changing cross-section but does not give it, so results apply only to level airways of constant section. Empirical index; units are not dimensionally consistent.",
+   "relevance": "Low air velocity in a large airway lets methane form a roof layer.",
+   "status": "verified",
+   "calc": "layeringIndex",
+   "note": "The equation in the request (24v²/(cF³)) does not match the PDF. The page image shows a cube root over 24v² divided by c times the square root of F; the PDF version is used.",
+   "base": [],
+   "triggers": "\\b(?:layer\\w*|roof|cavit\\w*|velocity|air speed|airway|ventilation|fan)\\b"
+  },
+  {
+   "id": "V02",
+   "group": "design",
+   "parameter": "Mine equivalent orifice",
+   "value": "> 2 (as large as possible)",
+   "unit": "m²",
+   "num": {
+    "min_exclusive": 2
+   },
+   "conditions": "Mechanically ventilated mine, exhaust method.",
+   "inputs": [],
+   "mechanism": [
+    "ventilation",
+    "methane"
+   ],
+   "sector": "coal",
+   "pdf_page": 7,
+   "printed_page": "6/17",
+   "section": "Measures against accumulation of firedamp",
+   "applicability": "Design guide; the mine's equivalent orifice must be measured.",
+   "limitations": "None noted.",
+   "relevance": "A small equivalent orifice limits the air available to dilute firedamp.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:main fan|mine ventilation|equivalent orifice|ventilation system)\\b"
+  },
+  {
+   "id": "V03",
+   "group": "design",
+   "parameter": "Workings that must not be ventilated by diffusion alone",
+   "value": "+ 3 (as printed)",
+   "unit": "m length",
+   "num": {
+    "value": 3
+   },
+   "conditions": "Developmental headings should be ventilated by ventilating pressure; air that has passed an abandoned area should not ventilate active workings.",
+   "inputs": [],
+   "mechanism": [
+    "ventilation",
+    "methane"
+   ],
+   "sector": "coal",
+   "pdf_page": 7,
+   "printed_page": "6/17",
+   "section": "Measures against accumulation of firedamp",
+   "applicability": "Design guide.",
+   "limitations": "Printed as “+ 3 m in length”; probably means more than 3 m. Kept as printed.",
+   "relevance": "Headings and blind ends need positive ventilation, not diffusion.",
+   "status": "flagged",
+   "flag": "Symbol “+” before 3 m is ambiguous (probably “>”).",
+   "base": [],
+   "triggers": "\\b(?:heading|blind end|dead end|diffusion|auxiliary fan|development)\\b"
+  },
+  {
+   "id": "E01",
+   "group": "design",
+   "parameter": "Flameproof and intrinsically safe apparatus voltage",
+   "value": "Flameproof enclosure above 25; intrinsically safe up to 25",
+   "unit": "V",
+   "num": {
+    "value": 25
+   },
+   "conditions": "A flameproof enclosure is not gas-tight: it withstands an internal explosion and cools escaping gases. Intrinsically safe apparatus produces sparks too cool to ignite gas (bells, telephones, exploders, relays).",
+   "inputs": [],
+   "mechanism": [
+    "electrical",
+    "methane"
+   ],
+   "sector": "gas",
+   "pdf_page": 9,
+   "printed_page": "8/17",
+   "section": "Measures against ignition of flammable firedamp mixtures",
+   "applicability": "Design guide; compliance of the equipment must be checked on site.",
+   "limitations": "As printed; certification rules are not covered.",
+   "relevance": "Electrical sparks are an ignition source for firedamp (PDF p.6).",
+   "status": "verified",
+   "base": [
+    "electrical"
+   ],
+   "triggers": "\\b(?:electric\\w*|cable|switch\\w*|motor|spark|flameproof|intrinsically safe|signal\\w*|telephone)\\b"
+  },
+  {
+   "id": "D01",
+   "group": "reference",
+   "parameter": "Conditions for a dust explosion",
+   "value": "A dense dust cloud with a definite mixing ratio with oxygen, and an ignition source of sufficient intensity",
+   "unit": "",
+   "num": null,
+   "conditions": "Stated for “a coal-dust or any industrial dust explosion”. Direct ignition sources listed: naked flames, friction, electric sparks (higher voltage and current than for firedamp), static, firedamp explosions.",
+   "inputs": [],
+   "mechanism": [
+    "coal_dust",
+    "dust_any"
+   ],
+   "sector": "any",
+   "pdf_page": 12,
+   "printed_page": "11/17 to 12/17",
+   "section": "Coal dust explosions; Causes",
+   "applicability": "Reference only. Whether a cloud forms at the site cannot be told from a description.",
+   "limitations": "No concentration limits for dust are given in the PDF.",
+   "relevance": "Deposited dust is dangerous once raised into a cloud and met by a flame.",
+   "status": "verified",
+   "base": [
+    "coal_dust",
+    "dust_any"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "D02",
+   "group": "reference",
+   "parameter": "Ignition temperature of dry airborne coal dust",
+   "value": "600 to 900",
+   "unit": "°C",
+   "num": {
+    "lo": 600,
+    "hi": 900
+   },
+   "conditions": "Dry dust dispersed in air.",
+   "inputs": [],
+   "mechanism": [
+    "coal_dust"
+   ],
+   "sector": "coal",
+   "pdf_page": 12,
+   "printed_page": "11/17",
+   "section": "Comparison of coal dust and firedamp",
+   "applicability": "Reference only; not a test of a given dust's explosibility.",
+   "limitations": "Flammability varies with fineness, volatile matter, ash and moisture (D04); a cloud and an ignition source are also needed (D01).",
+   "relevance": "Ignition sources in this range can ignite a coal-dust cloud.",
+   "status": "verified",
+   "base": [
+    "coal_dust"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "D03",
+   "group": "reference",
+   "parameter": "Ignition delay: coal dust vs firedamp",
+   "value": "Coal dust ≥ 100 ms even with the strongest source; firedamp 1 to 2 ms",
+   "unit": "ms",
+   "num": {
+    "dust_min": 100,
+    "gas_lo": 1,
+    "gas_hi": 2
+   },
+   "conditions": "Time needed for ignition.",
+   "inputs": [],
+   "mechanism": [
+    "coal_dust",
+    "combined"
+   ],
+   "sector": "coal",
+   "pdf_page": 12,
+   "printed_page": "11/17",
+   "section": "Comparison of coal dust and firedamp",
+   "applicability": "Reference only.",
+   "limitations": "None noted.",
+   "relevance": "Firedamp ignites far faster; a firedamp ignition is the commonest start of a coal-dust explosion (D05).",
+   "status": "verified",
+   "base": [
+    "coal_dust"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "D04",
+   "group": "reference",
+   "parameter": "Coal-dust properties that change flammability",
+   "value": "Fineness, volatile matter, ash, moisture",
+   "unit": "",
+   "num": null,
+   "conditions": "Flammability of dust in mine workings varies greatly with these. Dry winter air raises the danger.",
+   "inputs": [],
+   "mechanism": [
+    "coal_dust"
+   ],
+   "sector": "coal",
+   "pdf_page": 12,
+   "printed_page": "11/17",
+   "section": "Comparison of coal dust and firedamp; Causes",
+   "applicability": "Reference only.",
+   "limitations": "No numerical limits are given.",
+   "relevance": "Fine, dry, high-volatile dust is the most flammable; inert dust and water reduce it.",
+   "status": "verified",
+   "base": [
+    "coal_dust"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "D05",
+   "group": "reference",
+   "parameter": "Firedamp explosion raising deposited dust (secondary explosion)",
+   "value": "A gas explosion of ≈0.4 m³ of flammable firedamp mixture can start a much bigger coal-dust explosion",
+   "unit": "m³",
+   "num": {
+    "value": 0.4
+   },
+   "conditions": "The firedamp blast raises dust from floor, sides and roof before its flame dies. Danger is greater in long headings than on long faces. Most firedamp explosions do not develop because no dense cloud is raised.",
+   "inputs": [],
+   "mechanism": [
+    "combined",
+    "coal_dust",
+    "methane"
+   ],
+   "sector": "coal",
+   "pdf_page": 13,
+   "printed_page": "12/17",
+   "section": "Causes of coal-dust explosions: firedamp explosions",
+   "applicability": "Reference only.",
+   "limitations": "The closing bracket after “0.4 m3 volume” is missing in the PDF; the value itself is clear.",
+   "relevance": "A small gas ignition can turn into a mine-wide dust explosion where dust is not neutralised.",
+   "status": "verified",
+   "base": [
+    "combined"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "D06",
+   "group": "reference",
+   "parameter": "Coal-dust explosion severity compared with firedamp",
+   "value": "Some reach higher maximum pressures; longer duration; faster propagation; CO always in the afterdamp",
+   "unit": "",
+   "num": null,
+   "conditions": "General comparison.",
+   "inputs": [],
+   "mechanism": [
+    "coal_dust",
+    "combined"
+   ],
+   "sector": "coal",
+   "pdf_page": 12,
+   "printed_page": "11/17",
+   "section": "Comparison of coal dust and firedamp",
+   "applicability": "Reference only.",
+   "limitations": "No values.",
+   "relevance": "Coal-dust explosions are often the more disastrous.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:afterdamp|carbon monoxide|pressure|propagat\\w*)\\b"
+  },
+  {
+   "id": "D07",
+   "group": "design",
+   "parameter": "Air velocity in mine airways to limit dust pick-up",
+   "value": "< 3 (if possible)",
+   "unit": "m/s",
+   "num": {
+    "max_exclusive": 3
+   },
+   "conditions": "Dust-control measure; also homotropal ventilation (air travelling with the coal).",
+   "inputs": [],
+   "mechanism": [
+    "coal_dust",
+    "ventilation"
+   ],
+   "sector": "coal",
+   "pdf_page": 14,
+   "printed_page": "13/17",
+   "section": "Measures which prevent or reduce formation and dissemination of coal dust",
+   "applicability": "Design guide; needs a measured air velocity.",
+   "limitations": "“If possible”: methane dilution may require higher velocity.",
+   "relevance": "Fast air raises deposited dust into the air.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:velocity|air current|air speed|dispers\\w*|raised|airborne|transport\\w*|conveyor)\\b"
+  },
+  {
+   "id": "D08",
+   "group": "design",
+   "parameter": "Calcium chloride stemming cartridges for shotfiring in coal",
+   "value": "82 to 85 % CaCl₂ with 15 to 18 % water of crystallisation",
+   "unit": "% by mass (as printed: per cent)",
+   "num": {
+    "cacl2_lo": 82,
+    "cacl2_hi": 85,
+    "w_lo": 15,
+    "w_hi": 18
+   },
+   "conditions": "Stemming cartridges or ampoules of CaCl₂ powder reduce the dust made by shotfiring.",
+   "inputs": [],
+   "mechanism": [
+    "blasting_coal",
+    "coal_dust"
+   ],
+   "sector": "coal",
+   "pdf_page": 14,
+   "printed_page": "13/17",
+   "section": "Measures which prevent or reduce formation and dissemination of coal dust",
+   "applicability": "Design guide.",
+   "limitations": "Basis of the percentages (mass) is not stated.",
+   "relevance": "Shotfiring in coal raises dust that a blast flame can ignite.",
+   "status": "verified",
+   "base": [
+    "blasting_coal"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "D09",
+   "group": "design",
+   "parameter": "Dust neutralisation before shotfiring",
+   "value": "Within a radius of 10 to 20 of the working coal face",
+   "unit": "m",
+   "num": {
+    "lo": 10,
+    "hi": 20
+   },
+   "conditions": "Dust neutralised or consolidated with water or inert dust before shotfiring.",
+   "inputs": [],
+   "mechanism": [
+    "blasting_coal",
+    "coal_dust"
+   ],
+   "sector": "coal",
+   "pdf_page": 15,
+   "printed_page": "14/17",
+   "section": "Measures against ignition of dust accumulations",
+   "applicability": "Design guide; the treated radius must be checked on site.",
+   "limitations": "None noted.",
+   "relevance": "Prevents a blast flame from igniting dust near the face.",
+   "status": "verified",
+   "base": [
+    "blasting_coal"
+   ],
+   "triggers": "\\b(?:shot\\s?fir\\w*|blast\\w*|stone dust\\w*|inert dust)\\b"
+  },
+  {
+   "id": "B01",
+   "group": "design",
+   "parameter": "Length of roadway occupied by a shelf barrier",
+   "value": "25 to 40",
+   "unit": "m",
+   "num": {
+    "lo": 25,
+    "hi": 40
+   },
+   "conditions": "Shelf barrier of dust-laden shelves supported across and along the roadway; installed near shafts and pit bottoms, in level and inclined roadways, gate roads, development headings and near junctions.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 15,
+   "printed_page": "14/17",
+   "section": "Stone dust barriers: barrier design",
+   "applicability": "Design specification; compliance needs site measurement and the applicable standard.",
+   "limitations": "None noted.",
+   "relevance": "Stone-dust barriers stop a coal-dust explosion from propagating.",
+   "status": "verified",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B02",
+   "group": "design",
+   "parameter": "Polish-shelf plank size",
+   "value": "10 to 15 wide, 35 to 50 long",
+   "unit": "cm",
+   "num": {
+    "w_lo": 10,
+    "w_hi": 15,
+    "l_lo": 35,
+    "l_hi": 50
+   },
+   "conditions": "Several short planks laid alongside one another in the direction of the roadway. The figure on PDF p.16 labels the plank 100–150 mm.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 15,
+   "printed_page": "14/17",
+   "section": "Stone dust barriers: barrier design",
+   "applicability": "Design specification.",
+   "limitations": "None noted.",
+   "relevance": "Shelf construction of the barrier type the PDF describes for India.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:shelf|shelves|plank\\w*|polish)\\b"
+  },
+  {
+   "id": "B03",
+   "group": "design",
+   "parameter": "Approved shelf type in India",
+   "value": "Only the Polish Shelf (statement in the PDF)",
+   "unit": "",
+   "num": null,
+   "conditions": "Two designs are in common use: German (improved Dortmund) and Polish.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 16,
+   "printed_page": "15/17",
+   "section": "Stone dust barriers",
+   "applicability": "Source statement only; not checked as current regulatory advice.",
+   "limitations": "Date of the statement is not given.",
+   "relevance": "The shelf values below refer to the Polish shelf.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:shelf|shelves|polish|approved|design)\\b"
+  },
+  {
+   "id": "B04",
+   "group": "design",
+   "parameter": "Light Polish shelf",
+   "value": "Width ≤ 35 cm; dust loading ≤ 29.8 kg/m of shelf length",
+   "unit": "cm; kg/m",
+   "num": {
+    "w_max": 35,
+    "load_max": 29.8
+   },
+   "conditions": "Figure: “Max. 350 mm for light shelves”.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 16,
+   "printed_page": "15/17",
+   "section": "Stone dust barriers",
+   "applicability": "Design specification.",
+   "limitations": "None noted.",
+   "relevance": "Limits for the light shelf type.",
+   "status": "verified",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B05",
+   "group": "design",
+   "parameter": "Heavy Polish shelf",
+   "value": "Width ≥ 35 and ≤ 50 cm; dust loading ≤ 59.6 kg/m of shelf length",
+   "unit": "cm; kg/m",
+   "num": {
+    "w_min": 35,
+    "w_max": 50,
+    "load_max": 59.6
+   },
+   "conditions": "Figure: “Max. 500 mm for heavy shelves”.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 16,
+   "printed_page": "15/17",
+   "section": "Stone dust barriers",
+   "applicability": "Design specification.",
+   "limitations": "A width of exactly 35 cm fits both the light and the heavy definition as printed.",
+   "relevance": "Limits for the heavy shelf type.",
+   "status": "verified",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B06",
+   "group": "design",
+   "parameter": "Light barrier dust loading",
+   "value": "≥ 107.4 kg per m² of average roadway cross-section; all shelves light",
+   "unit": "kg/m²",
+   "num": {
+    "min": 107.4
+   },
+   "conditions": "Total stone dust on the barrier per square metre of roadway cross-section.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 16,
+   "printed_page": "15/17",
+   "section": "Stone dust barriers",
+   "applicability": "Design specification; needs the measured roadway cross-section and dust mass.",
+   "limitations": "None noted.",
+   "relevance": "Minimum dust mass for a light barrier.",
+   "status": "verified",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B07",
+   "group": "design",
+   "parameter": "Intermediate barrier dust loading",
+   "value": "195.3 kg per m² of roadway cross-section; not more than one-third of the shelves heavy",
+   "unit": "kg/m²",
+   "num": {
+    "value": 195.3
+   },
+   "conditions": "As printed.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 16,
+   "printed_page": "15/17",
+   "section": "Stone dust barriers",
+   "applicability": "Design specification.",
+   "limitations": "Printed without “at least” (unlike the light and heavy barriers) and with “roadway cross-section” instead of “average roadway cross-section”.",
+   "relevance": "Dust mass for an intermediate barrier.",
+   "status": "flagged",
+   "flag": "Not stated whether 195.3 kg/m² is a minimum or an exact value.",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B08",
+   "group": "design",
+   "parameter": "Heavy barrier dust loading",
+   "value": "≥ 390.6 kg per m² of average roadway cross-section; “not less than one-third of the shelves of the light type” (as printed)",
+   "unit": "kg/m²",
+   "num": {
+    "min": 390.6
+   },
+   "conditions": "As printed.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 16,
+   "printed_page": "15/17",
+   "section": "Stone dust barriers",
+   "applicability": "Design specification.",
+   "limitations": "The composition wording looks inconsistent: a heavy barrier would be expected to need at least one-third heavy shelves. Kept as printed.",
+   "relevance": "Minimum dust mass for a heavy barrier.",
+   "status": "flagged",
+   "flag": "Shelf composition probably should read “heavy type”; not corrected.",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B09",
+   "group": "design",
+   "parameter": "Distance between adjacent shelves",
+   "value": "Light shelves: min 0.91, max 2.10. Heavy–heavy or heavy–light: min 1.22, max 2.59",
+   "unit": "“in” as printed (probably m)",
+   "num": {
+    "light_min": 0.91,
+    "light_max": 2.1,
+    "heavy_min": 1.22,
+    "heavy_max": 2.59
+   },
+   "conditions": "Spacing along the roadway.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 16,
+   "printed_page": "15/17",
+   "section": "Stone dust barriers",
+   "applicability": "Design specification; not used in any calculation while the unit is unresolved.",
+   "limitations": "The PDF prints “in”. Inches are implausible for shelves 35–50 cm wide in a 25–40 m barrier; metres (0.91 m ≈ 3 ft, 1.22 m ≈ 4 ft) fit. Not corrected.",
+   "relevance": "Shelf spacing within the barrier.",
+   "status": "flagged",
+   "flag": "Unit printed as “in”; probably metres.",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B10",
+   "group": "design",
+   "parameter": "Time from dust release to flame arrival",
+   "value": "0.1 to 0.2",
+   "unit": "s",
+   "num": {
+    "lo": 0.1,
+    "hi": 0.2
+   },
+   "conditions": "Sufficient to create a flame-quenching stone-dust cloud. Too long: dust falls to the floor; too short: dust is not dispersed.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 17,
+   "printed_page": "16/17",
+   "section": "Stone dust barriers",
+   "applicability": "Design reference; depends on barrier design, location and explosion intensity.",
+   "limitations": "Printed as “0. 1”; read as 0.1.",
+   "relevance": "Why barrier position relative to the ignition point matters.",
+   "status": "verified",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B11",
+   "group": "design",
+   "parameter": "When stone-dust barriers fail",
+   "value": "Barrier in a flammable firedamp mixture or under a roof layer; flame velocity above ≈500 m/s; barrier less than 40 to 60 m “or far” from a face so that dynamic pressure is below the minimum, normally 3 to 5 kN/m²; weak ignition giving too little pressure",
+   "unit": "m/s; m; kN/m²",
+   "num": {
+    "v_flame": 500,
+    "d_lo": 40,
+    "d_hi": 60,
+    "p_lo": 3,
+    "p_hi": 5
+   },
+   "conditions": "A weak explosion may not throw the shelves off their supports.",
+   "inputs": [],
+   "mechanism": [
+    "barrier",
+    "combined"
+   ],
+   "sector": "coal",
+   "pdf_page": 17,
+   "printed_page": "16/17",
+   "section": "Failure of stone-dust barriers",
+   "applicability": "Design reference; whether a barrier at the site would fail cannot be judged without its position, design and the explosion conditions.",
+   "limitations": "“less than 40 to 60 m or far from a face” is ambiguous (probably “or too far”).",
+   "relevance": "A barrier works only if the explosion pressure disperses the dust before the flame arrives.",
+   "status": "flagged",
+   "flag": "Placement wording “or far” is incomplete.",
+   "base": [
+    "barrier"
+   ],
+   "triggers": null
+  },
+  {
+   "id": "B12",
+   "group": "design",
+   "parameter": "Water barriers compared with stone dust",
+   "value": "Heat capacity of water ≈5 × that of dust",
+   "unit": "ratio",
+   "num": {
+    "value": 5
+   },
+   "conditions": "Water troughs on shelves near the roof burst under the pressure wave.",
+   "inputs": [],
+   "mechanism": [
+    "barrier"
+   ],
+   "sector": "coal",
+   "pdf_page": 17,
+   "printed_page": "16/17",
+   "section": "Water barriers",
+   "applicability": "Reference only.",
+   "limitations": "None noted.",
+   "relevance": "Alternative to stone-dust barriers.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:water barrier\\w*|water trough\\w*|trough\\w*)\\b"
+  },
+  {
+   "id": "B13",
+   "group": "design",
+   "parameter": "Steel doors in explosion-proof stoppings",
+   "value": "≈20 thick, single-wing, in a solid stopping",
+   "unit": "mm",
+   "num": {
+    "value": 20
+   },
+   "conditions": "Stoppings must withstand full explosion pressure and starve the flame of oxygen; also used as blasting dams in gassy development.",
+   "inputs": [],
+   "mechanism": [
+    "barrier",
+    "sealed"
+   ],
+   "sector": "coal",
+   "pdf_page": 17,
+   "printed_page": "16/17",
+   "section": "Explosion-proof stoppings",
+   "applicability": "Design reference.",
+   "limitations": "None noted.",
+   "relevance": "Isolating a fire or explosion-prone area.",
+   "status": "verified",
+   "base": [],
+   "triggers": "\\b(?:stopping\\w*|explosion-proof|blasting dam\\w*|steel door\\w*)\\b"
+  }
+ ],
+ "calculators": {
+  "methanePosition": {
+   "title": "Measured methane vs the PDF's flammable range",
+   "uses": [
+    "M01",
+    "M02"
+   ],
+   "inputs": [
+    {
+     "k": "c",
+     "label": "Measured methane",
+     "unit": "% CH₄"
+    }
+   ]
+  },
+  "gasEmissionIndex": {
+   "title": "Gas-emission index and Indian degree of gassiness",
+   "uses": [
+    "M11",
+    "M12",
+    "M13"
+   ],
+   "inputs": [
+    {
+     "k": "c",
+     "label": "Methane in return air",
+     "unit": "% CH₄"
+    },
+    {
+     "k": "Q",
+     "label": "Return air quantity",
+     "unit": "m³/min"
+    },
+    {
+     "k": "O",
+     "label": "Output",
+     "unit": "t/d"
+    },
+    {
+     "k": "K",
+     "label": "K (weekly max ÷ weekly mean)",
+     "unit": "–"
+    }
+   ]
+  },
+  "layeringIndex": {
+   "title": "Middendorf layering index",
+   "uses": [
+    "V01"
+   ],
+   "inputs": [
+    {
+     "k": "v",
+     "label": "Mean air velocity",
+     "unit": "m/s"
+    },
+    {
+     "k": "c",
+     "label": "Mean methane",
+     "unit": "% CH₄"
+    },
+    {
+     "k": "F",
+     "label": "Airway cross-section",
+     "unit": "m²"
+    }
+   ]
+  },
+  "leChatelier": {
+   "title": "Lower flammable limit of a gas mixture (Le Chatelier)",
+   "uses": [
+    "M04"
+   ],
+   "inputs": [
+    {
+     "k": "p",
+     "label": "Share of the combustible gases",
+     "unit": "%"
+    },
+    {
+     "k": "l",
+     "label": "Lower limit of that gas",
+     "unit": "%"
+    }
+   ]
+  }
+ }
+}

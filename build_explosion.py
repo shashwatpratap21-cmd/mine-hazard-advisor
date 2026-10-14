@@ -45,9 +45,11 @@ TAXONOMY = [
 STRONG = {
     "explosion event": r"\bexplo(?:sion|sions|de|des|ded|ding)\b",
     "methane / firedamp": r"\b(?:methane|firedamp|fire damp|inflammable gas|flammable gas|gassy|ch4)\b",
-    "coal dust": r"\bcoal[- ]dust\b|\bdust (?:cloud|explosion|deposits?|layer)\b|\bstone[- ]dust",
+    "coal dust": r"\bcoal[- ]dust\b|\bstone[- ]dust",
+    "dust cloud / deposits": r"\bdust (?:cloud|explosion|deposits?|layer)\b",
     "explosives / blasting": r"\b(?:explosives?|blast(?:ing|ed|s)?|detonat\w*|detonators?|misfire\w*|sockets?|charged holes?|shot ?fir\w*|shot holes?|fly ?rock|blasters?|barood|visphot)\b",
     "explosive / flammable atmosphere": r"\b(?:explosive|flammable|inflammable|combustible) (?:\w+ )?(?:atmosphere|mixture|range|gas\w*)\b|\bgas (?:accumulat\w*|build-?up|release|outburst)|\b(?:accumulat\w*|build-?up of) (?:of )?gas|\boutburst\b",
+    "combustible dust": r"\b(?:combustible|explosive|flammable|inflammable|sulphide|sulfide|pyrit\w*|pyrrhotite|sulphur|sulfur|alumin(?:i)?um|magnesium)(?:[- ]\w+)?[- ]dust\b",
     "spontaneous heating": r"\bspontaneous(?:ly)? (?:heating|combustion)\b|\bself[- ]heat\w*",
     "hydrocarbon / gas cylinder": r"\bhydrocarbons?\b|\bvapou?rs?\b|\bacetylene\b|\b(?:gas|oxygen) cylinders?\b",
 }

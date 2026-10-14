@@ -547,7 +547,7 @@
         "Blasting and Explosives-Related Explosion"
       ],
       "measure": "In sulphide-ore (base metal) mines, reduce ore-dust explosion risk during blasting: low-incendivity explosives, a drill pattern that prevents rifling, accurate drilling, careful charge loading, inert stemming in hole collars, washing down walls and backs before blasting, and water-mist curtains during the blast.",
-      "keywords": "sulphide|pyrite|ore|metal|base metal|stope|blast",
+      "keywords": "blast\\w*|shot ?fir\\w*|explosives?|charg\\w*|detonat\\w*",
       "dgms_pattern": "",
       "refs": [
         {
@@ -558,7 +558,7 @@
           "note": "Sulphide ore-dust explosions occurred during blasting in Canadian base metal mines with pyrite/pyrrhotite ores; lists these seven precautionary measures."
         }
       ],
-      "context": "metal|ore|sulphide|pyrite|pyrrhotite|base metal|copper|zinc|lead"
+      "context": "sulphide|sulfide|pyrit\\w*|pyrrhotite|base metal|copper|zinc"
     },
     {
       "id": "G23",

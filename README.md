@@ -35,7 +35,7 @@ The list is ordered by how many of the matched accidents support each measure, a
 
 Methane / Firedamp · Coal-Dust · Combined Methane and Coal-Dust · Blasting and Explosives-Related · Electrical or Mechanical Ignition of Explosive Atmosphere · Spontaneous Heating, Fire and Explosion Escalation · Metal Mine: Gas, Dust and Other Mechanisms.
 
-The 87 SANKET explosion records fall under Blasting (42), Methane / Firedamp (22), Coal-Dust (1) and Metal Mine (1), plus records whose type DGMS did not record (10 gas or coal dust, 6 explosion) and five outside the taxonomy (hydrocarbon/vapour in a vessel, gas cylinder). No historical record is classified as Combined, Electrical/Mechanical Ignition or Spontaneous Heating; for those the site says so and shows related records.
+The 87 SANKET explosion records fall under Blasting (42), Methane / Firedamp (22), Coal-Dust (1) and Metal Mine (1), plus records whose type DGMS did not record (10 gas or coal dust, 6 explosion) and five outside the taxonomy (hydrocarbon/vapour in a vessel, gas cylinder). No historical record is classified as Combined, Electrical/Mechanical Ignition or Spontaneous Heating; for those the site says so and shows related records. Combustible non-coal dust (for example in ore-processing plants) falls under the Metal Mine class; no historical SANKET record and neither book covers it, so the site shows related dust-explosion records as context and an insufficient-evidence notice rather than general advice (see the 14 October update in [`reports/final_audit.md`](reports/final_audit.md)).
 
 ## Models and evaluation
 

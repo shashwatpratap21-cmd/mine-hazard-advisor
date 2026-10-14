@@ -574,7 +574,8 @@ if(X){
   LEX={strong:rx(X.lexicon.strong), weak:rx(X.lexicon.weak), atmo:new Set(X.lexicon.atmosphere), event:new RegExp(X.lexicon.event,"i"), groups:new Set(X.lexicon.explosive_groups)};
 }
 // same rule as build_explosion.py evidence()
-function xEvidence(text, dgmsHazard){
+function xEvidence(text, dgmsHazard){ return Object.assign(xEvidence0(text, dgmsHazard),{text}); }
+function xEvidence0(text, dgmsHazard){
   const strong=Object.keys(LEX.strong).filter(k=>LEX.strong[k].test(text));
   const weak=Object.keys(LEX.weak).filter(k=>LEX.weak[k].test(text));
   const other=strong.filter(k=>k!=="explosives / blasting");
@@ -583,7 +584,10 @@ function xEvidence(text, dgmsHazard){
   const atmo=weak.some(k=>LEX.atmo.has(k))&&weak.some(k=>!LEX.atmo.has(k));
   return {relevant:other.length>0||blastingOk||atmo, strong, weak, event};
 }
-function xClassify(text, ev){
+// words that place combustible dust outside coal ("processing" and "mill" are not enough: coal is processed and milled too)
+const NONCOAL_DUST=/\b(?:sulph\w*|sulf\w*|pyrit\w*|pyrrhotite|alumin(?:i)?um|magnesium|ore|metal\w*|concentrator|smelter)\b/i;
+const nonCoalDust=text=>NONCOAL_DUST.test(text)&&!/\bcoal\b/i.test(text);
+function xClassify(text, ev, mt){
   const v=vectorize(text, XCLF_IDX, X.clf.idf);
   const z=X.clf.coef.map((row,k)=>{ let s=X.clf.intercept[k]; for(const [j,w] of v) s+=row[j]*w; return s; });
   const mx=Math.max(...z), e=z.map(x=>Math.exp(x-mx)), sum=e.reduce((a,b)=>a+b,0);
@@ -597,11 +601,18 @@ function xClassify(text, ev){
      && !ev.weak.includes("dust") && !ev.weak.includes("gas / ventilation") && !/sulph|sulfid|hydrogen/i.test(text)){
     top=probs.find(c=>c.cat.startsWith("Blasting")); ambiguous=false; metalRule=true;
   }
+  // Combustible dust is not automatically coal dust: when the description names a non-coal combustible dust and never
+  // mentions coal (and the mine type is not Coal), the coal-dust classes are not supported by the text.
+  let dustRule=false;
+  if(ev && /^(?:Coal-Dust|Combined)/.test(top.cat) && ev.strong.includes("combustible dust") && !/\bcoal\b/i.test(text) && mt!=="Coal"
+     && NONCOAL_DUST.test(text)){
+    top=probs.find(c=>c.cat.startsWith("Metal Mine")); dustRule=true; ambiguous=top.p<0.35;
+  }
   const contrib=[];
   for(const [j,w] of v){ const c=X.clf.coef[top.k][j]*w; if(c>0) contrib.push([X.clf.terms[j],c]); }
   contrib.sort((a,b)=>b[1]-a[1]);
   const terms=[]; for(const [t] of contrib){ if(terms.some(p=>p.includes(t)||t.includes(p))) continue; terms.push(t); if(terms.length===5) break; }
-  return {probs, top, terms, ambiguous, metalRule};
+  return {probs, top, terms, ambiguous, metalRule, dustRule};
 }
 function mineContext(text, mt){
   if(mt) return {label:mtLabel(mt), from:"filter", metal:mt!=="Coal"&&mt!=="Oil & gas", coal:mt==="Coal"};
@@ -627,16 +638,32 @@ const CLOSE={
 const HREC=X?X.hrec:[];
 const HVEC=HREC.map(h=>vectorize([h.situation,h.cause_label,h.reported_cause,h.ignition,h.mineral].join(" "), RET_IDX, D.ret.idf));
 function hPlaceOk(h,place){ if(!place) return true; if(!h.place||/not reported/i.test(h.place)) return null; return h.place===place||(place==="Opencast"&&h.place==="Above Ground"); }
-function rankHistX(q, place, mt, cat){
+const METAL="Metal Mine: Gas, Dust and Other Explosion Mechanisms";
+// The metal-mine class covers several physical mechanisms; which historical records are related depends on the evidence.
+function histRelations(cat, ev){
+  if(cat!==METAL||!ev) return {rel:RELATED[cat]||[], close:CLOSE[cat]||[]};
+  const dust=ev.strong.includes("combustible dust")||ev.strong.includes("coal dust")||ev.strong.includes("dust cloud / deposits")||ev.weak.includes("dust");
+  const blast=ev.strong.includes("explosives / blasting");
+  const gas=["methane / firedamp","explosive / flammable atmosphere","hydrocarbon / gas cylinder"].some(k=>ev.strong.includes(k))||ev.weak.includes("gas / ventilation");
+  const rel=[], close=[];
+  // a stated non-coal dust is related only to confirmed dust explosions; with the material unstated, gas-or-dust records also qualify
+  if(dust){ rel.push("Coal-Dust Explosion"); close.push("Coal-Dust Explosion"); if(!nonCoalDust(ev.text||"")) rel.push(GASDUST); }
+  if(blast) rel.push("Blasting and Explosives-Related Explosion");
+  if(gas) rel.push(HYDRO);
+  return rel.length?{rel,close}:{rel:RELATED[cat]||[], close:CLOSE[cat]||[]};
+}
+function rankHistX(q, place, mt, cat, ev){
   const qv=vectorize(q, RET_IDX, D.ret.idf), out=[]; let eligible=0, unknownPlace=0;
   HREC.forEach((h,i)=>{
     if(mt && h.mine_type!==mt) return;
     const pOk=hPlaceOk(h,place); if(pOk===false) return; if(pOk===null){ if(h.xcat===cat) unknownPlace++; return; }
     eligible++;
     let sim=0; for(const [j,w] of qv){ const x=HVEC[i].get(j); if(x) sim+=x*w; }
-    const same=h.xcat===cat, related=!same&&(RELATED[cat]||[]).includes(h.xcat);
-    const close=(CLOSE[cat]||[]).includes(h.xcat);
-    if(same||(related&&(sim>=0.03||(close&&h.kind==="list")))||sim>=0.15) out.push({h,sim,same,related,score:sim+(same?0.15:related?0.08:0)});
+    const {rel,close:cl}=histRelations(cat, ev);
+    // the metal-mine class is a catch-all, so a record of that class must also share wording with the description
+    const same=h.xcat===cat&&(cat!==METAL||!ev||sim>0), related=h.xcat!==cat&&rel.includes(h.xcat);
+    const close=cl.includes(h.xcat);
+    if(same||(related&&(sim>=0.03||(close&&h.kind==="list")))||(sim>=0.15&&h.kind==="narrative")) out.push({h,sim,same,related,score:sim+(same?0.15:related?0.08:0)});
   });
   out.sort((a,b)=>b.score-a.score||(b.h.year||0)-(a.h.year||0));
   return {qv, eligible, unknownPlace, matches:out, nSame:out.filter(m=>m.same).length};
@@ -777,6 +804,7 @@ function pickGuidance(cat, text, topIds, mt){
   const rel=RELATED[cat]||[], ctxText=text+" "+(mt||"");
   const score=g=>{ const own=g.mechanisms.includes(cat)?2:g.mechanisms.some(m=>rel.includes(m))?0.7:0; if(!own) return 0;
     const kw=g.keywords&&new RegExp(g.keywords,"i").test(text)?1:0, here=g.links.filter(l=>topIds.has(l[0])).length;
+    if(cat===METAL&&!kw&&!here) return 0;
     return own+kw+here*1.5+g.links.length*0.3+g.refs.filter(r=>r.support==="states").length*0.2; };
   return X.guidance.filter(g=>!g.context||new RegExp("\\b(?:"+g.context+")","i").test(ctxText)).map(g=>({g,s:score(g)})).filter(x=>x.s>=2).sort((a,b)=>b.s-a.s).slice(0,6).map(x=>x.g);
 }
@@ -820,8 +848,8 @@ function xMeasuresBlock(cat, text, top, mt){
     <div class="block reveal">
       <div class="sec-h"><h2>Preventive measures</h2><span class="sub">${esc(cat)}</span></div>
       <p class="partial">Book measures come from Ramlu and Cheng, with the section and page cited. DGMS findings come from the closest SANKET explosion accidents. Open “Evidence and references” on any measure to check its sources.</p>
-      ${none?`<div class="notice warn"><b>Insufficient evidence.</b> Neither reference book gives guidance for this mechanism, and no DGMS finding among the matched accidents states a preventive measure.</div>`:""}
-      ${!gs.length&&!none?`<div class="notice">Neither reference book gives guidance for “${esc(cat)}”. The measures below come from DGMS findings only.</div>`:""}
+      ${none?`<div class="notice warn"><b>Insufficient evidence.</b> Neither reference book gives guidance that matches this situation, and no DGMS finding among the matched accidents states a preventive measure. No measures are shown rather than general advice.${cat===METAL&&/dust/i.test(text)?" Both books treat dust explosions in coal mines (and, in Ramlu, sulphide ore dust during blasting); neither covers combustible dust in ore-processing plants.":""}</div>`:""}
+      ${!gs.length&&!none?`<div class="notice">Neither reference book gives guidance that matches this situation (“${esc(cat)}”). The measures below come from DGMS findings only.</div>`:""}
       ${gHTML||dHTML?`<ol class="acts">${gHTML}${dHTML}</ol>`:""}
       ${/Blasting/.test(cat)?`<p class="partial">${esc(X.uncovered_by_books)}</p>`:""}
     </div>
@@ -901,7 +929,8 @@ function hazardPanel(hz, probs, unclear, pct){
 }
 
 function explosionPanel(xa, pct){
-  const {cls,ev,ctx,nHist,nSyn}=xa, t=cls.top;
+  const {cls,ev,ctx,nHist,nSyn,text,hz,unclear}=xa, t=cls.top;
+  const detail=t.cat===METAL?[ev.strong.includes("combustible dust")&&!/\bcoal\b/i.test(text)?(nonCoalDust(text)?"combustible non-coal dust":"combustible dust (material not stated)"):ev.weak.includes("dust")||ev.strong.includes("coal dust")||ev.strong.includes("dust cloud / deposits")?"dust":"", ev.strong.includes("explosives / blasting")?"explosives / blasting":"", ["methane / firedamp","explosive / flammable atmosphere","hydrocarbon / gas cylinder"].some(k=>ev.strong.includes(k))||ev.weak.includes("gas / ventilation")?"gas":""].filter(Boolean):[];
   const coalOnly=X.coal_only.includes(t.cat)&&ctx.metal;
   const feats=[...ev.strong,...ev.weak];
   return `
@@ -911,11 +940,13 @@ function explosionPanel(xa, pct){
         <div class="xp-main">
           <h2 class="xp-cat">${cls.ambiguous?`Ambiguous: ${esc(t.cat)} or ${esc(cls.probs[1].cat)}`:esc(t.cat)}</h2>
           <div class="score"><span class="v">${pct(t.p)}%</span><span class="k">explosion-category confidence</span><span class="badge ${cls.ambiguous?"lo":confClass(t.p)}"><i aria-hidden="true"></i>${cls.ambiguous?"Uncertain":interp(t.p)}</span></div>
-          <p class="interp">From a classifier trained on ${X.metrics.n_train} examples: ${X.syn.length} synthetic scenarios (labels not yet expert-validated) and ${X.metrics.n_train-X.syn.length} historical DGMS explosion narratives. It says which explosion mechanism your description resembles, not the chance of an explosion.${coalOnly?` <b>Note:</b> this category was defined for coal mines, but the mine context is metal / non-coal. Check the description.`:""}${cls.metalRule?` The classifier's top label was “${esc(cls.probs[0].cat)}”; because your description names explosives or blasting and no gas or dust, it is shown as blasting, the category SANKET uses for explosives accidents in non-coal mines.`:""}</p>
+          <p class="interp">From a classifier trained on ${X.metrics.n_train} examples: ${X.syn.length} synthetic scenarios (labels not yet expert-validated) and ${X.metrics.n_train-X.syn.length} historical DGMS explosion narratives. It says which explosion mechanism your description resembles, not the chance of an explosion.${coalOnly?` <b>Note:</b> this category was defined for coal mines, but the mine context is metal / non-coal. Check the description.`:""}${cls.dustRule?` The classifier's top label was “${esc(cls.probs[0].cat)}”, but your description names a non-coal combustible dust and does not mention coal, so the coal-dust classes are not supported; it is shown as the non-coal mechanism.`:""}${(cls.ambiguous||text.trim().split(/\s+/).length<5)?` <b>Not enough detail to settle the mechanism.</b> Say what the dust or gas is, where it is (mine type, plant or underground working) and any ignition source.`:""}${cls.metalRule?` The classifier's top label was “${esc(cls.probs[0].cat)}”; because your description names explosives or blasting and no gas or dust, it is shown as blasting, the category SANKET uses for explosives accidents in non-coal mines.`:""}</p>
           <dl class="kv xkv">
             <dt>Explosion evidence</dt><dd>${feats.map(f=>`<span class="pill">${esc(f)}</span>`).join(" ")}</dd>
             <dt>Words behind the category</dt><dd>${cls.terms.length?cls.terms.map(esc).join(", "):"none specific"}</dd>
+            ${detail.length?`<dt>Mechanism in your words</dt><dd>${detail.map(esc).join(", ")} (this class covers several mechanisms in metal and other non-coal mines)</dd>`:""}
             <dt>Mine context</dt><dd>${esc(ctx.label)}</dd>
+            ${unclear?`<dt>General hazard model</dt><dd>Could not place this description in a DGMS hazard group (highest: ${esc(hz.hazard)}, ${pct(hz.p)}%), so its ranking is not shown.</dd>`:""}
             <dt>Records found</dt><dd>${nHist} historical SANKET explosion record${nHist===1?"":"s"} (${xa.hist.matches.filter(m=>m.h.src.startsWith("Coal")).length} coal, ${xa.hist.matches.filter(m=>!m.h.src.startsWith("Coal")).length} non-coal) · ${nSyn} synthetic scenario${nSyn===1?"":"s"}</dd>
           </dl>
         </div>
@@ -962,9 +993,9 @@ function run(opts={}){
     if(X && !opts.noExplosion){
       const ev=xEvidence(text, hz.hazard);
       if(ev.relevant){
-        const cls=xClassify(text, ev), ctx=mineContext(text, mt);
-        const hist=rankHistX(q, place, mt, cls.top.cat), syn=rankSyn(text, mt, cls.top.cat);
-        xa={ev,cls,ctx,hist,syn,nHist:hist.matches.length,nSyn:syn.matches.length};
+        const cls=xClassify(text, ev, mt), ctx=mineContext(text, mt);
+        const hist=rankHistX(q, place, mt, cls.top.cat, ev), syn=rankSyn(text, mt, cls.top.cat);
+        xa={ev,cls,ctx,hist,syn,nHist:hist.matches.length,nSyn:syn.matches.length,text,hz,unclear};
       }
     }
   }
@@ -992,7 +1023,7 @@ function run(opts={}){
         <div class="btns" style="margin-top:12px">${place||mt?`<button type="button" class="btn2" id="broaden">Search all places and mine types</button>`:""}<button type="button" class="btn2" id="allacc">Search all DGMS accidents</button></div></div></div></div>`;
     const synBlock = xa.syn.matches.length ? listBlock("sx","Synthetic training scenarios", `<p class="partial">Generated examples from ${esc(X.source)}. They are <b>not</b> DGMS accidents, did not happen, and are never counted as evidence. Place-of-work filters are not applied to them because their work-area context is broad.</p>`) :
       `<div class="block"><div class="sec-h reveal"><h2>Synthetic training scenarios</h2><span class="sub">None found</span></div><p class="partial">No synthetic scenario matches this description${mt?` for ${esc(mtLabel(mt))}`:""}.</p></div>`;
-    out.innerHTML = relaxedNote + hazardPanel(hz,probs,unclear,pct) + explosionPanel(xa,pct) + xMeasuresBlock(xa.cls.top.cat, text, top, mt) + histBlock + synBlock;
+    out.innerHTML = relaxedNote + explosionPanel(xa,pct) + (unclear?"":hazardPanel(hz,probs,unclear,pct)) + xMeasuresBlock(xa.cls.top.cat, text, top, mt) + histBlock + synBlock;
     if(xa.hist.matches.length) makePager("hx", xa.hist.matches, m=>xCaseHTML(m,xa.hist.qv), "historical explosion records", `(from ${xa.hist.eligible} SANKET explosion records ${place||mt?"in these filters":"(coal and non-coal)"})`);
     if(xa.syn.matches.length) makePager("sx", xa.syn.matches, synHTML, "synthetic scenarios", `(from ${xa.syn.eligible}${mt?` for ${mtLabel(mt)}`:""})`);
   } else {

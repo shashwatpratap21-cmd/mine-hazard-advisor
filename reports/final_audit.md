@@ -163,7 +163,7 @@ Earlier regression scripts were also rerun and still pass:
 
 - `build_explosion.py` and `build_site.py` run cleanly; `build_model.py` reproduces `model.json` exactly.
 - Required data files are in the repository. The page uses no absolute local paths and needs no server.
-- **Deployment:** pushed to `main` as commit e242011, and the remote branch was confirmed to hold it. Five minutes after the push, the GitHub Pages site was still serving the previous revision (old tagline), so **live verification of this revision is outstanding**. The Claude-hosted copy of the site was republished with the same build. The audit environment cannot open github.io directly; it was checked through a web fetch, which may itself be cached.
+- **Deployment:** pushed to `main` as commit e242011. The GitHub Pages build for that commit, and for the follow-up report commit, completed successfully (confirmed in the repository's Actions log). An earlier web fetch had shown a cached copy of the old page.
 
 ### Remaining defects and open items
 
@@ -188,3 +188,60 @@ Earlier regression scripts were also rerun and still pass:
   - Historical records are thin for coal-dust and other underground mechanisms.
   - The explosion classifier can only be evaluated on real data for blasting.
   - These limits are stated in the app and should be stated when presenting the project.
+
+
+## Update, 14 October 2026: combustible-dust classification and retrieval
+
+**Problem reported:** "Combustible processing dust" returned *Hazard unclear 15%*, unrelated DGMS groups (Transportation machinery, Falls) and generic gas-testing measures.
+
+**Causes found** (none involved missing source data or a mapping error in the records):
+
+1. **Evidence gate.** The explosion-evidence lexicon knew "coal dust" and "dust explosion" but not "combustible dust". The phrase matched only the weak word "dust", so explosion analysis never ran and the page fell back to the 8-group DGMS model. That model's training narratives contain no dust-explosion vocabulary (DGMS has no such accidents in 2016–22), so it returned near-uniform probabilities.
+2. **Retrieval.** The metal-mine class is a catch-all (gas, dust, blasting and other mechanisms in non-coal mines). It was linked only to blasting and vessel-explosion records, so a dust description would have retrieved blasting accidents. A short major-accident list row (cause label only) could also enter through the "strong shared wording" fallback by sharing the single word "dust".
+3. **Measures.** For that catch-all class, the generic firedamp, ventilation and welding measures qualified without matching any word in the description. Ramlu's sulphide-ore-dust measure, which is about blasting precautions, matched any text containing "ore", "metal" or even "lead".
+4. **Labels.** The lexicon reported "dust cloud" as "coal dust" evidence.
+
+**What the data contains:**
+- The 200 synthetic scenarios include combustible-dust explosions in ore-processing plants, crushers and dust collectors, all labelled Metal Mine.
+- No SANKET record (coal or non-coal) is a combustible-dust explosion in a processing plant.
+- The nearest historical evidence:
+  - C-HIST-191, a coal-dust explosion (cause label only);
+  - N-HIST-087, a gas/dust explosion in a stone mine (agent not stated);
+  - ten coal "gas or coal-dust" records whose type was not recorded.
+- The books cover coal-dust explosions and, in Ramlu, sulphide ore dust *during blasting*. Neither covers combustible dust in ore-processing plants.
+
+**Changes** (no output is hard-coded for any phrase):
+- `build_explosion.py`: new strong evidence term "combustible dust" (combustible, explosive, flammable, sulphide, pyrite, sulphur, aluminium or magnesium dust, allowing one word in between). "Dust cloud / deposits" is now its own evidence term instead of being called "coal dust". Gate precision and recall on the 610 DGMS narratives are unchanged (0.794 / 0.871), and no narrative contains the new terms. The classifier is unchanged.
+- `template.html`:
+  - **Retrieval:** for the metal-mine class, related historical mechanisms now follow the evidence in the description:
+    - dust leads to confirmed coal-dust explosions, plus gas-or-dust records only when the dust material is not stated;
+    - blasting leads to blasting records;
+    - gas leads to vessel and hydrocarbon explosions.
+  - **Matching:** a metal-mine record must share wording with the description, and the wording fallback no longer admits label-only list rows.
+  - **Coal dust only when supported:** if the classifier picks Coal-Dust or Combined but the description names a non-coal combustible dust and never mentions coal, the result is shown as the non-coal mechanism. The panel states this and keeps the classifier's own probabilities.
+  - **Measures:** for the metal-mine class, book measures must match the description's words or the matched accidents. If nothing qualifies, an "Insufficient evidence" notice explains the gap in the books instead of showing general advice.
+  - **Vague input:** short or ambiguous descriptions get a request for the material, the location and any ignition source. The "Mechanism in your words" row distinguishes "combustible non-coal dust" from "combustible dust (material not stated)".
+  - **Panel order:** in explosion mode the explosion analysis now comes first. When the general DGMS model cannot place the description (below 20%), its ranking is not shown; the explosion panel reports its highest group and percentage instead. All confidence values are the models' own outputs and are labelled as class match, not explosion probability.
+- `data/reference_guidance.json`: G22 (Ramlu pp. 165–166, sulphide ore dust) now matches blasting words in a sulphide or base-metal context only. Its book reference is unchanged.
+
+**Regression results** (run in headless Chromium against the built page):
+
+| Input (mine type) | Explosion result | Uncertainty / hazard shown | Historical records | Preventive measures |
+|---|---|---|---|---|
+| Combustible processing dust (Any) | Ambiguous: Metal Mine: Gas, Dust and Other Explosion Mechanisms or Coal-Dust Explosion (29%, Uncertain) | tagged potential hazard; asks for more detail; general DGMS panel hidden: highest: Transportation machinery, 15% | Showing 1–6 of 11 historical explosion records: C-HIST-001(Gas or), C-HIST-191(Coal-Dust Explosion), C-HIST-275(Gas or), C-HIST-272(Gas or), C-HIST-256(Gas or), C-HIST-247(Gas or) | Insufficient-evidence notice; no general advice shown |
+| Combustible processing dust (Metal ore) | Ambiguous: Metal Mine: Gas, Dust and Other Explosion Mechanisms or Coal-Dust Explosion (29%, Uncertain) | tagged potential hazard; asks for more detail; general DGMS panel hidden: highest: Transportation machinery, 15% | empty state: No suitable historical explosion records under the current filters (Any place of work · Me… | Insufficient-evidence notice; no general advice shown |
+| Fine combustible dust accumulates inside a metal-ore processing plant's dust collection system near a potential ignition source (Any) | Metal Mine: Gas, Dust and Other Explosion Mechanisms (71%, Strong match) | tagged potential hazard; general DGMS panel hidden: highest: Transportation machinery, 15% | Showing 1–2 of 2 historical explosion records: C-HIST-191(Coal-Dust Explosion), N-HIST-087(Metal Mine:) | Insufficient-evidence notice; no general advice shown |
+| Methane accumulates in an underground coal working (Any) | Methane / Firedamp Explosion (77%, Strong match) | tagged potential hazard; general DGMS panel: Gas, dust & other combustible material | Showing 1–6 of 33 historical explosion records: C-HIST-004(Methane /), C-HIST-171(Methane /), C-HIST-159(Methane /), EXP-01(Methane /), C-HIST-074(Methane /), C-HIST-067(Methane /) | Dilute firedamp with adequate ventilation and sample th…; Keep development headings ventilated up to the face: au…; Inspect every ventilated working place each shift for m… |
+| An initial methane explosion disperses deposited coal dust (Any) | Combined Methane and Coal-Dust Explosion (49%, Strong match) | general DGMS panel: Gas, dust & other combustible material | Showing 1–6 of 34 historical explosion records: C-HIST-191(Coal-Dust Explosion), C-HIST-171(Methane /), C-HIST-159(Methane /), C-HIST-074(Methane /), C-HIST-067(Methane /), C-HIST-041(Methane /) | Dilute firedamp with adequate ventilation and sample th…; Stone-dust (rock-dust) all roadways so that mine dust a…; Before shotfiring in coal, neutralise or consolidate du… |
+| A worker drills near a suspected misfired blast hole (Any) | Blasting and Explosives-Related Explosion (44%, Strong match) | tagged potential hazard; general DGMS panel: Explosives | Showing 1–6 of 42 historical explosion records: NC-11(Blasting and), NC-10(Blasting and), EXP-11(Blasting and), NC-04(Blasting and), NC-09(Blasting and), NC-03(Blasting and) | Work only with a supervisor present: a Foreman, Mining …; Only a trained, authorised blaster should handle, charg…; Before drilling, wash down and examine the rock for mis… |
+| A dumper reverses near an opencast mine dump yard (Any) | (no explosion analysis) | general DGMS panel: Transportation machinery | general DGMS mode: Showing 1–6 of 478 matching records (from 610 records in the full dataset) | Keep haul roads wide, with gentle gradients, berms and …; Check brakes and the vehicle's condition before every s…; Use the reversing alarm and horn, and have a spotter wh… |
+| Combustible dust cloud ignited in a sulphide concentrator mill (Any) | Ambiguous: Metal Mine: Gas, Dust and Other Explosion Mechanisms or Electrical or Mechanical Ignition of Explosive Atmosphere (13%, Uncertain) | asks for more detail; coal-dust class rejected (non-coal dust named); general DGMS panel hidden: highest: Gas, dust & other combustible material, 18% | Showing 1–1 of 1 historical explosion records: C-HIST-191(Coal-Dust Explosion) | Insufficient-evidence notice; no general advice shown |
+| Coal dust has built up on the belt roadway (Any) | Coal-Dust Explosion (45%, Strong match) | tagged potential hazard; general DGMS panel: Transportation machinery | Showing 1–6 of 13 historical explosion records: C-HIST-001(Gas or), C-HIST-191(Coal-Dust Explosion), C-HIST-275(Gas or), C-HIST-272(Gas or), C-HIST-256(Gas or), C-HIST-247(Gas or) | Stone-dust (rock-dust) all roadways so that mine dust a…; Before shotfiring in coal, neutralise or consolidate du…; Confine explosions with correctly sited, designed, inst… |
+
+All earlier suites were rerun and pass:
+- the 21-test audit suite;
+- the 10-case explosion validation (changes limited to the intended ones above);
+- general-mode search regression;
+- 864-combination chart reconciliation;
+- tab navigation;
+- the phone layout at 320, 390 and 768 px.

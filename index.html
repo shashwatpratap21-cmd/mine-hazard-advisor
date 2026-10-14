@@ -325,6 +325,8 @@ header{justify-content:flex-start}
 .go{width:100%}
 .go:focus-visible{outline:2px solid var(--amber-hi);outline-offset:3px}
 form .field>.label{color:var(--text-2)}
+.spin.ld{display:inline-block;width:22px;height:22px;flex:none;border-radius:50%;border:2px solid rgba(242,181,68,.25);border-top-color:var(--amber)}
+@media (prefers-reduced-motion:no-preference){.spin.ld{animation:spin .7s linear infinite}}
 </style>
 
 <div class="wrap">
@@ -362,7 +364,7 @@ form .field>.label{color:var(--text-2)}
       <div class="chips" id="exMore" role="group" aria-label="More examples" hidden></div>
       <button type="button" class="ex-toggle" id="exToggle" aria-expanded="false" aria-controls="exMore">View all examples</button>
     </div>
-    <button class="go" id="go" type="submit"><span class="spin" aria-hidden="true"></span><span id="goT">Find precedents</span></button>
+    <button class="go" id="go" type="button"><span class="spin" aria-hidden="true"></span><span id="goT">Find precedents</span></button>
   </form>
 
   <section class="out" id="out" aria-live="polite"></section>
@@ -399,7 +401,7 @@ form .field>.label{color:var(--text-2)}
   <form class="ms-f card" id="msForm" autocomplete="off" role="search">
     <div class="field"><label class="label" for="msQ">Mine or colliery name</label>
       <input id="msQ" list="msList" placeholder="Enter mine name, colliery name, quarry, or metal mine..."></div>
-    <button class="go" id="msGo" type="submit">Search</button>
+    <button class="go" id="msGo" type="button">Search</button>
     <datalist id="msList"></datalist>
   </form>
   <div id="msOut" aria-live="polite"></div>
@@ -797,6 +799,7 @@ function submit(){
   if(pendingRun||$("go").disabled) return;                       // a search is already running
   const btn=$("go"); btn.disabled=true; btn.classList.add("busy"); $("goT").textContent="Analysing…";
   $("out").setAttribute("aria-busy","true");
+  $("out").innerHTML=`<div class="empty card" role="status"><span class="spin ld" aria-hidden="true"></span><p><b>Analysing…</b> Classifying the situation and searching the historical explosion records.</p></div>`;
   pendingRun=setTimeout(()=>{ pendingRun=null; $("out").removeAttribute("aria-busy"); try{ run(); } catch(err){ showError(err); } finally { btn.disabled=false; btn.classList.remove("busy"); $("goT").textContent="Find precedents"; } }, 140);
 }
 function interp(p){ return p>=0.35?"Strong match":p>=0.2?"Moderate match":"Weak match"; }
@@ -1443,7 +1446,11 @@ function msBooks(m,H){
       ${b.topics.length?`<span>Topics in the surrounding text: ${b.topics.map(esc).join(", ")}.</span>`:""}</div>`; }).join("")}</div>`;
 }
 if(MD){ $("msList").innerHTML=[...new Set(MD.mines.map(m=>m.name))].map(n=>`<option value="${esc(n)}">`).join("");
-  $("msForm").addEventListener("submit",e=>{ e.preventDefault(); msRun(); }); }
+  // Searches run from the button's click handler, not from form submission: inside a sandboxed frame without
+  // "allow-forms" (as when the page is embedded) the browser blocks form submission and no submit event fires.
+  $("msForm").addEventListener("submit",e=>e.preventDefault());
+  $("msGo").addEventListener("click",msRun);
+  $("msQ").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); msRun(); } }); }
 
 // Header logo / title: start a new search. Resets only the Advisor's on-page state; no data is touched and the page is not reloaded.
 function resetAdvisor(){
@@ -1477,7 +1484,9 @@ window.addEventListener("hashchange",()=>setView(location.hash==="#causes"?"caus
 document.querySelectorAll("[data-cv]").forEach(b=>b.onclick=()=>{ CZ.view=b.dataset.cv; document.querySelectorAll("[data-cv]").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); czRender(); });
 document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{ CZ.scale=b.dataset.sc; czRender(); });
 if(location.hash==="#causes") setView("causes"); else if(location.hash==="#mines") setView("mines");
-$("f").addEventListener("submit",e=>{e.preventDefault();submit();});
+$("f").addEventListener("submit",e=>e.preventDefault());       // never relies on form submission (blocked in sandboxed frames)
+$("go").addEventListener("click",submit);
+$("q").addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); submit(); } });   // Ctrl/Cmd+Enter runs the search
 $("q").value=""; $("place").value=""; $("mt").value="";
 idle();
 (async()=>{ try{ sample=await window.claude?.use?.("sample"); }catch{ sample=null; } if(last) wireAdvice(); })();
